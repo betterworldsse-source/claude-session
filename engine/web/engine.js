@@ -205,8 +205,8 @@ export async function start({ timeline, scenes, chapters }) {
     <div class="layer" data-r="overlay">
       <div id="chip-part" data-r="chip"><span class="tag" data-r="chipTag"></span><span data-r="chipText"></span></div>
       <div id="progress" data-r="progress"></div>
-      <div id="chapter-card" data-r="card"></div>
       <div id="caption"><div class="pill" data-r="cap"></div></div>
+      <div id="chapter-card" data-r="card"></div>
     </div>`);
 
   const lineMap = Object.fromEntries(timeline.lines.map((l) => [l.id, l]));

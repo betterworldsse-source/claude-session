@@ -145,14 +145,18 @@ def main(ep: str, mux: bool = True) -> None:
     print(f"mix → {out}  (final {lufs(out):.1f} LUFS)")
 
     if mux:
+        # 렌더 원본(CRF 16)은 용량이 커서, 화질 차이가 거의 없는 CRF 20으로 다시 압축해 100MB 이하로 맞춤
         video = build / "video_noaudio.mp4"
         final = build / "final.mp4"
         subprocess.run([
             "ffmpeg", "-v", "error", "-y", "-i", str(video), "-i", str(out),
-            "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "256k", "-ar", "48000",
+            "-map", "0:v:0", "-map", "1:a:0",
+            "-c:v", "libx264", "-preset", "slow", "-crf", "20", "-tune", "animation", "-pix_fmt", "yuv420p",
+            "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
+            "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
             "-shortest", "-movflags", "+faststart", str(final),
         ], check=True)
-        print(f"final → {final}")
+        print(f"final → {final} ({final.stat().st_size / 1e6:.1f} MB)")
 
 
 if __name__ == "__main__":
