@@ -1,0 +1,12 @@
+{
+  "name": "parenting-video-studio",
+  "private": true,
+  "type": "module",
+  "description": "출산·육아 정보 유튜브 영상 제작 파이프라인 (HTML 모션그래픽 → MP4)",
+  "scripts": {
+    "render": "node engine/render.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.56.1"
+  }
+}

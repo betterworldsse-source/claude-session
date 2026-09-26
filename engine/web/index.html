@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>Video Stage</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="stage"></div>
+  <script type="module">
+    import { start } from './engine.js';
+    const params = new URLSearchParams(location.search);
+    const ep = params.get('ep');
+    const timeline = await (await fetch(`../../build/${ep}/timeline.json`)).json();
+    const mod = await import(`../../episodes/${ep}/scenes.js`);
+    await start({ timeline, scenes: mod.scenes, chapters: mod.chapters });
+    // 브라우저에서 직접 볼 때: ?t=초 로 특정 시점 확인
+    if (params.has('t')) window.renderFrame(parseFloat(params.get('t')));
+  </script>
+</body>
+</html>

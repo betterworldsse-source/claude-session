@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>Thumbnail</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="stage"></div>
+  <script type="module">
+    const ep = new URLSearchParams(location.search).get('ep');
+    const mod = await import(`../../episodes/${ep}/thumbnail.js`);
+    mod.buildThumbnail(document.getElementById('stage'));
+    await document.fonts.ready;
+    window.__ready = true;
+  </script>
+</body>
+</html>
