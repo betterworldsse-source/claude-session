@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 # 레벨 설정 (dB). BGM은 약 -20 LUFS로 만들어진다고 가정
 VOICE_LUFS = -17.0      # 내레이션 목표 라우드니스(마스터링 전)
-BGM_OPEN_DB = -5.0      # 말이 없을 때 배경음악 게인
+BGM_OPEN_DB = -3.5      # 말이 없을 때 배경음악 게인
 BGM_DUCK_DB = -12.5     # 말할 때 배경음악 게인
 SFX_DB = -10.0          # 효과음 공통 게인
 HOLD = 0.9              # 이 시간보다 짧은 쉼에서는 음악을 올리지 않음(펌핑 방지)

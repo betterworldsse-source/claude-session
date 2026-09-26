@@ -7,7 +7,7 @@
 
 | 파일 | 내용 |
 |---|---|
-| `episodes/01-parental-leave/output/육아휴직_1년6개월_6플러스6_정리.mp4` | 완성 영상 (1920×1080, 30fps, 5분 10초, -14 LUFS) |
+| `episodes/01-parental-leave/output/01-parental-leave_1080p.mp4` | 완성 영상 (1920×1080, 30fps, 5분 10초, -14 LUFS) |
 | `episodes/01-parental-leave/thumbnail.png` | 유튜브 썸네일 (1280×720) |
 | `episodes/01-parental-leave/subtitles.srt` | 유튜브 자막 업로드용 SRT |
 | `episodes/01-parental-leave/youtube.md` | 제목 후보 · 설명란(챕터 포함) · 태그 · 고정 댓글 |

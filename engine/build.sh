@@ -36,4 +36,5 @@ node engine/render.mjs thumb "$EP"
 echo "▶ 7/7 대본 문서 · 유튜브 챕터"
 python3 engine/docs.py "$EP"
 
-echo "✅ 완료: $B/final.mp4"
+mkdir -p "episodes/$EP/output" && cp "$B/final.mp4" "episodes/$EP/output/${EP}_1080p.mp4"
+echo "✅ 완료: episodes/$EP/output/${EP}_1080p.mp4"
