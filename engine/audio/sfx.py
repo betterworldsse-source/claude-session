@@ -173,8 +173,8 @@ def sparkle(rng) -> np.ndarray:
     x = np.zeros((len(t), 2))
     for i, m in enumerate((84, 86, 89, 91, 93, 96)):         # C6 D6 F6 G6 A6 C7 (F 펜타토닉 상행)
         f0 = midi_hz(m)
-        bell = lambda tt, f0=f0: partials(tt, f0, [(1.0, 1.0, 0.10, 0.0), (2.0, 0.15, 0.05, 0.4),  # noqa: E731
-                                                    (2.76, 0.08, 0.03, 1.1)])   # 짧게 울려 음이 뭉개지지 않게
+        spec = [(1.0, 1.0, 0.10, 0.0), (2.0, 0.15, 0.05, 0.4), (2.76, 0.08, 0.03, 1.1)]   # 짧게 울려 음이 또렷하게
+        bell = lambda tt, f0=f0, spec=spec: partials(tt, f0, spec)   # noqa: E731
         x += stereo(note_at(t, i * 0.055, bell) * 0.87 ** i, 0.25 if i % 2 == 0 else -0.25)  # 점점 여리게
     x = signal.sosfilt(bw(2, 10000, "lowpass"), x, axis=0)
     return finalize(small_reverb(x, rng, rt60=1.0, wet=0.25), 0.002, 0.25)
@@ -195,9 +195,9 @@ def swell(rng) -> np.ndarray:
     for i, m in enumerate((77, 81, 84, 89)):                  # F5 A5 C6 F6 (F장조) + ±4 cent 코러스
         for c in (-4, 4):
             chord += np.sin(2 * np.pi * midi_hz(m) * 2 ** (c / 1200) * t + i + c)
-    shimmer = chord * (1 + 0.15 * np.sin(2 * np.pi * 5.5 * t)) * np.exp(np.minimum(t - tp, 0) / 0.5)
+    shimmer = chord * (1 + 0.15 * np.sin(2 * np.pi * 5.5 * t)) * rise   # 노이즈와 같은 크레셴도
     nz /= np.abs(nz).max()
-    x = nz * rise[:, None] + stereo(0.03 * shimmer)           # 화음은 희미하게 (노이즈 대비 약 -20 dB)
+    x = nz * rise[:, None] + stereo(0.022 * shimmer)          # 화음은 희미하게 (노이즈 대비 -5 → 정점 -14 dB)
     return finalize(x, 0.02, dur - tp)
 
 

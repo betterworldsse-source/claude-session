@@ -286,7 +286,7 @@ def print_tables() -> None:
     print("[화성표] 8마디 루프 · F장조 · MIDI 번호 (C4 = 60)")
     print(f"  {'bar':<4}{'chord':<8}{'piano  LH | RH':<44}{'pad':<18}{'bass':<14}music box  A / B")
     for slot, chords in enumerate(LOOP):
-        for k, (beat, ch) in enumerate(chords):
+        for k, (_, ch) in enumerate(chords):
             lh, rh = PIANO[ch]
             piano = f"{nm(lh)}({lh}) | " + " ".join(f"{nm(m)}({m})" for m in rh)
             pad = " ".join(nm(m) for m in PAD[ch])
@@ -303,7 +303,7 @@ def print_tables() -> None:
     print("  검증 통과: 모든 음 F장조(Bb, E natural), 보이싱 ⊆ 화음, 3·7도 포함, 오르골 F5–D6 펜타토닉·충돌음 없음")
 
 
-def print_plan(bars: list, times: list, starts: list, spans: list) -> None:
+def print_plan(bars: list, times: list, spans: list) -> None:
     print(f"\n[구성] 84 BPM · 1마디 = {BAR:.3f}s")
     for name, t0, t1 in spans:
         sec = [b for b in bars if b.section == name]
@@ -737,7 +737,8 @@ def band_energy(x: np.ndarray, edges=(20, 250, 1000, 4000, SR / 2 + 1)) -> np.nd
     """모노 합의 대역별 에너지 비율 (Welch PSD 합)."""
     f, p = signal.welch(x.mean(axis=1) if x.ndim == 2 else x, fs=SR, nperseg=8192, noverlap=0, detrend=False)
     e = np.array([p[(f >= lo) & (f < hi)].sum() for lo, hi in zip(edges, edges[1:])])
-    return e / p[f >= edges[0]].sum()
+    tot = p[f >= edges[0]].sum()
+    return e / tot if tot > 0 else e
 
 
 def verify(path: Path, spans: list) -> dict:
@@ -786,9 +787,9 @@ def main() -> None:
     validate_tables()
     print_tables()
     n = int(round(args.duration * SR))
-    bars, starts, end_bar = build_plan(args.duration, times)
+    bars, _, end_bar = build_plan(args.duration, times)
     spans = section_spans(bars, args.duration)
-    print_plan(bars, times, starts, spans)
+    print_plan(bars, times, spans)
     print(f"  마지막 Fmaj9: 마디 {end_bar} ({end_bar * BAR:.2f}s)부터 {args.duration - end_bar * BAR:.2f}s 울림, "
           f"마지막 {FADE_OUT:.0f}s 페이드아웃")
 
@@ -829,7 +830,7 @@ def main() -> None:
         send += SENDS[k] * v
         band_rows[k] = np.mean(v.astype(np.float64) ** 2) * band_energy(v, (20, 1000, 4000, SR / 2 + 1))[1]
     del layers
-    tot14 = sum(band_rows.values())
+    tot14 = max(sum(band_rows.values()), 1e-30)
     print("  1–4 kHz 대역 에너지 기여 (내레이션 대역): " +
           " · ".join(f"{k} {100 * e / tot14:.1f}%" for k, e in sorted(band_rows.items(), key=lambda kv: -kv[1])))
 
@@ -843,7 +844,8 @@ def main() -> None:
     del dry, wet, send
 
     # --- 마스터: 35 Hz HPF · 2.8 kHz 살짝 비움(-1.5 dB) · 6 kHz 하이셸프 -6 dB · 12 kHz LPF
-    eq = np.vstack([bw(4, 35, "highpass"), rbj("peak", 2800, -1.5, 0.9), rbj("highshelf", 6000, -6.0), bw(2, 12000, "lowpass")])
+    eq = np.vstack([bw(4, 35, "highpass"), rbj("peak", 2800, -1.5, 0.9),
+                    rbj("highshelf", 6000, -6.0), bw(2, 12000, "lowpass")])
     mix = signal.sosfilt(eq, mix, axis=0)
     mix *= 10 ** ((TARGET_LUFS - lufs(mix)) / 20)
     mix, gr = glue_compress(mix)
@@ -878,7 +880,8 @@ def main() -> None:
         print("  ffmpeg 측정 기준으로 재보정:")
         ln = verify(out, spans)
     ok = abs(float(ln["input_i"]) - TARGET_LUFS) <= 0.5 and float(ln["input_tp"]) <= TP_LIMIT
-    print(f"    {'OK' if ok else '확인 필요'}: 목표 {TARGET_LUFS} LUFS, TP ≤ {TP_LIMIT} dBTP · 소요 {time.time() - t_start:.1f}s")
+    print(f"    {'OK' if ok else '확인 필요'}: 목표 {TARGET_LUFS} LUFS, TP ≤ {TP_LIMIT} dBTP · "
+          f"소요 {time.time() - t_start:.1f}s")
 
 
 if __name__ == "__main__":
