@@ -7,12 +7,13 @@
 
 | 파일 | 내용 |
 |---|---|
-| `episodes/01-parental-leave/output/01-parental-leave_1080p.mp4` | 완성 영상 (1920×1080, 30fps, 5분 10초, -14 LUFS) |
+| `episodes/01-parental-leave/output/01-parental-leave_1080p.mp4` | 완성 영상 (1920×1080, 30fps, 약 3분 17초, -14 LUFS) |
 | `episodes/01-parental-leave/thumbnail.png` | 유튜브 썸네일 (1280×720) |
 | `episodes/01-parental-leave/subtitles.srt` | 유튜브 자막 업로드용 SRT |
 | `episodes/01-parental-leave/youtube.md` | 제목 후보 · 설명란(챕터 포함) · 태그 · 고정 댓글 |
 | `episodes/01-parental-leave/script.md` | 타임코드가 붙은 대본 |
 | `episodes/01-parental-leave/script.json` | 대본 원본 (자막 표기 / TTS 발음 분리) |
+| `episodes/01-parental-leave/recording.md` | 내 목소리 녹음 가이드 (대본과 자동 동기화) |
 | `episodes/01-parental-leave/scenes.js` | 장면별 모션그래픽 코드 |
 
 ### 사실관계 (영상에 쓴 기준)
@@ -57,6 +58,7 @@ python3 engine/docs.py 01-parental-leave                     # 대본 문서 · 
 ## 라이선스 · 출처
 
 - 폰트: [Pretendard](https://github.com/orioncactus/pretendard) — SIL Open Font License 1.1 (`assets/fonts/Pretendard-LICENSE.txt`)
+- 제목 폰트: [Jua](https://fonts.google.com/specimen/Jua) — SIL Open Font License 1.1 (`assets/fonts/Jua-OFL.txt`)
 - 아이콘: [Lucide](https://lucide.dev) — ISC License (`assets/icons/Lucide-LICENSE.txt`)
 - 캐릭터 일러스트, 배경음악, 효과음: 이 저장소의 코드로 직접 그리고 합성한 창작물(외부 샘플·음원 미사용)
 - 내레이션: Google 번역 TTS로 만든 가이드 음성 — 위 "내레이션을 내 목소리로 바꾸기" 참고

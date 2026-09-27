@@ -13,7 +13,7 @@
     const ep = params.get('ep');
     const timeline = await (await fetch(`../../build/${ep}/timeline.json`)).json();
     const mod = await import(`../../episodes/${ep}/scenes.js`);
-    await start({ timeline, scenes: mod.scenes, chapters: mod.chapters });
+    await start({ timeline, scenes: mod.scenes, chapters: mod.chapters, asOf: mod.asOf });
     // 브라우저에서 직접 볼 때: ?t=초 로 특정 시점 확인
     if (params.has('t')) window.renderFrame(parseFloat(params.get('t')));
   </script>

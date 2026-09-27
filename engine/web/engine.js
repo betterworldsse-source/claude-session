@@ -78,6 +78,28 @@ export function enter(el, t, t0, o = {}) {
   return p;
 }
 
+/** 위에서 톡 떨어져 살짝 눌렸다가 튀어 오르는 블록 낙하 */
+export function drop(el, t, t0, o = {}) {
+  const h = o.h ?? 150, d = o.d ?? 0.6, fall = 0.6;
+  const p = clamp((t - t0) / d);
+  let y, sx = 1, sy = 1;
+  if (p < fall) {
+    const q = p / fall;
+    y = -h * (1 - q * q);
+  } else {
+    const q = (p - fall) / (1 - fall);
+    y = -h * 0.06 * Math.sin(Math.PI * q);
+    const sq = Math.max(0, 1 - q * 2.2);
+    sx = 1 + 0.1 * sq;
+    sy = 1 - 0.12 * sq;
+  }
+  let op = clamp((t - t0) / 0.1);
+  if (o.out != null) op *= 1 - P(t, o.out, o.od ?? 0.35, ease.inCubic);
+  el.style.transformOrigin = '50% 100%';
+  tf(el, { x: o.x ?? 0, y: (o.y ?? 0) + y, sx: sx * (o.s ?? 1), sy: sy * (o.s ?? 1), o: op * (o.o ?? 1) });
+  return p;
+}
+
 export const pop = (el, t, t0, o = {}) => enter(el, t, t0, { dy: 0, s0: 0.3, d: 0.55, e: ease.outBack, ...o });
 
 /** overflow:hidden 마스크 안의 텍스트를 아래에서 위로 드러냄 */
@@ -196,7 +218,7 @@ function buildCaptions(timeline) {
 }
 
 // ---------------------------------------------------------------- 메인
-export async function start({ timeline, scenes, chapters }) {
+export async function start({ timeline, scenes, chapters, asOf = '' }) {
   const stage = document.getElementById('stage');
   const bgLayer = mount(stage, '<div class="layer" data-r="bg"></div>').bg;
   const bg = buildBackground(bgLayer);
@@ -205,10 +227,12 @@ export async function start({ timeline, scenes, chapters }) {
     <div class="layer" data-r="overlay">
       <div id="chip-part" data-r="chip"><span class="tag" data-r="chipTag"></span><span data-r="chipText"></span></div>
       <div id="progress" data-r="progress"></div>
+      <div id="stamp" data-r="stamp"></div>
       <div id="caption"><div class="pill" data-r="cap"></div></div>
       <div id="chapter-card" data-r="card"></div>
     </div>`);
 
+  overlay.stamp.textContent = asOf;
   const lineMap = Object.fromEntries(timeline.lines.map((l) => [l.id, l]));
   const sceneMap = Object.fromEntries(timeline.scenes.map((s) => [s.id, s]));
   const sfx = [];
@@ -331,6 +355,7 @@ export async function start({ timeline, scenes, chapters }) {
     }
     tf(overlay.chip, { x: -30 * (1 - chipOn), o: chipOn });
     tf(overlay.progress, { y: -12 * (1 - chipOn), o: chipOn });
+    tf(overlay.stamp, { y: -12 * (1 - chipOn), o: chipOn });
     for (const s of segs) {
       const r = chapterRanges[s.k];
       const f = r ? clamp((t - r.start) / (r.end - r.start)) : 0;

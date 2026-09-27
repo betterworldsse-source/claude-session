@@ -1,29 +1,29 @@
-// 1화: 육아휴직 1년 6개월 & 6+6 부모육아휴직제 (3분 버전) — 장면 정의
+// 1화: 육아휴직 1년 6개월 & 6+6 부모육아휴직제 (약 3분 버전) — 장면 정의
 // 각 장면은 build(root, ctx)에서 DOM을 만들고, 시간 t를 받는 update 함수를 돌려줍니다.
 // ctx.at('문장id', k) = 해당 문장의 k번째 자막 청크가 시작되는 시각(초)
 // 모든 타이밍이 문장/자막 기준이라, 내 목소리로 녹음을 바꿔도 그래픽이 자동으로 따라갑니다.
-import { ease, P, clamp, lerp, wave, mount, tf, opacity, enter, pop, rise, countTo, prepDraw, draw, icon } from '../../engine/web/engine.js';
+// 시각 언어: "블록 1개 = 1개월", "블록 1개 = 50만 원" — 블록이 떨어져 쌓이며 설명합니다.
+import { ease, P, clamp, lerp, wave, mount, tf, opacity, enter, pop, drop, rise, countTo, prepDraw, draw, icon } from '../../engine/web/engine.js';
 import { mom, dad, avatar, family, blink, coins } from '../../engine/web/art.js';
+
+export const asOf = '2026년 9월 기준';
 
 export const chapters = {
   1: { label: '① 기간', title: '기간', sub: '육아휴직 1년 6개월', short: '기간', color: 'mint', icon: 'calendar-plus', card: ['#2DBFA4', '#138C78'] },
   2: { label: '② 급여', title: '급여', sub: '6+6 부모육아휴직제', short: '급여', color: 'gold', icon: 'coins', card: ['#F9A12B', '#E0700A'] },
-  3: { label: '정리', title: '정리', sub: '한눈에 보기', short: '정리', color: 'blue', icon: 'list-checks', card: null },
+  3: { label: '정리', title: '정리', sub: '열쇠는 하나', short: '정리', color: 'blue', icon: 'list-checks', card: null },
 };
 
 // ------------------------------------------------------------------ 공용 조각
 
-/** 가운데 정렬 헤더(작은 라벨 + 큰 제목). lines: [{html, at}] 순서대로 교체 */
-function header(root, { y = 128, eyebrow = null, eyeAt = null, lines }) {
+/** 가운데 정렬 헤더(Jua 제목). lines: [{html, at}] 순서대로 교체 */
+function header(root, { y = 128, size = 76, lines }) {
+  const box = Math.round(size * 1.24);
   const r = mount(root, `
-    <div class="abs col" style="left:0;top:${y}px;width:1920px;align-items:center">
-      ${eyebrow ? `<div class="eyebrow" data-r="hdEye">${eyebrow}</div>` : ''}
-      <div style="position:relative;height:92px;width:1920px;margin-top:${eyebrow ? 20 : 0}px">
-        ${lines.map((l, i) => `<div class="abs" style="left:0;top:0;width:1920px;height:92px;overflow:hidden;text-align:center"><div class="h1" data-r="hdL${i}">${l.html}</div></div>`).join('')}
-      </div>
+    <div class="abs" style="left:0;top:${y}px;width:1920px;height:${box}px">
+      ${lines.map((l, i) => `<div class="abs" style="left:0;top:0;width:1920px;height:${box}px;overflow:hidden;text-align:center"><div class="h1" data-r="hdL${i}" style="font-size:${size}px">${l.html}</div></div>`).join('')}
     </div>`);
   return (t) => {
-    if (r.hdEye) enter(r.hdEye, t, eyeAt ?? lines[0].at - 0.15, { dy: 16, s0: 0.9 });
     lines.forEach((l, i) => {
       const next = lines[i + 1];
       rise(r[`hdL${i}`], t, l.at, { out: next ? next.at - 0.05 : null, od: 0.35 });
@@ -31,7 +31,17 @@ function header(root, { y = 128, eyebrow = null, eyeAt = null, lines }) {
   };
 }
 
-/** 월 타일 줄. 타일 요소 배열을 돌려줌 */
+/** "헷갈리는 포인트 N" + Q 질문 줄 */
+function qaHead(root, { n, q, tChip, tQ, qSize = 50 }) {
+  const r = mount(root, `
+    <div class="abs chip" data-r="qaChip" style="left:150px;top:150px;height:54px;font-size:27px;padding:0 22px;border:3px solid var(--red);color:var(--red);background:rgba(255,255,255,0.75)">${icon('circle-help', { size: 28, stroke: 2.4 })}헷갈리는 포인트 ${n}</div>
+    <div class="abs row" data-r="qaQ" style="left:150px;top:230px;gap:26px"><div class="qbadge">Q</div><div style="font-size:${qSize}px;font-weight:780;letter-spacing:-0.03em;white-space:nowrap">${q}</div></div>`);
+  return (t) => {
+    enter(r.qaChip, t, tChip, { dx: -24, dy: 0 });
+    enter(r.qaQ, t, tQ, { dy: 24 });
+  };
+}
+
 function tileRow(parent, { x, y, n, cls = 'mint', size = 58, gap = 12, ref }) {
   let html = `<div class="abs" data-r="${ref}" style="left:${x}px;top:${y}px;width:${n * size + (n - 1) * gap}px;height:${size}px">`;
   for (let i = 0; i < n; i++) {
@@ -43,10 +53,12 @@ function tileRow(parent, { x, y, n, cls = 'mint', size = 58, gap = 12, ref }) {
   return Array.from({ length: n }, (_, i) => r[`${ref}_${i}`]);
 }
 
-const setCls = (el, cls) => { const c = `tile ${cls}`; if (el.className !== c) el.className = c; };
+const setCls = (el, cls, base = 'tile') => { const c = `${base} ${cls}`; if (el.className !== c) el.className = c; };
 const setHtml = (el, h) => { if (el.dataset.h !== h) { el.innerHTML = h; el.dataset.h = h; } };
 const LOCK = icon('lock', { size: 24, stroke: 2.4 });
 const CHECK = icon('check', { size: 30, stroke: 3.4 });
+const OK_BADGE = `<svg viewBox="0 0 48 48" width="100%" height="100%"><circle cx="24" cy="24" r="23" fill="#22B573"/><path d="M13 25l7.5 7.5L35 17" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const NO_BADGE = `<svg viewBox="0 0 48 48" width="100%" height="100%"><circle cx="24" cy="24" r="23" fill="#F0525A"/><path d="M16 16l16 16M32 16L16 32" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/></svg>`;
 
 function growW(el, t, t0, d, w, e = ease.inOutCubic) {
   const p = P(t, t0, d, e);
@@ -63,76 +75,98 @@ function flip(front, back, t, t0, d = 0.5) {
   tf(back, { sx: showBack ? Math.max(0.001, k) : 1, o: showBack ? 1 : 0 });
 }
 
-// ------------------------------------------------------------------ 1. 결론부터 (훅)
+/** 50만 원 블록 계단. counts[i]개 블록을 쌓은 기둥들 */
+function stairs(root, { x0, base, bw, bh, gap, pitch, counts, cls = 'gold', ref }) {
+  let html = '';
+  counts.forEach((n, i) => {
+    for (let k = 0; k < n; k++) {
+      html += `<div class="block ${cls}" data-r="${ref}_${i}_${k}" style="left:${x0 + i * pitch}px;top:${base - (k + 1) * (bh + gap)}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.3)}px"></div>`;
+    }
+  });
+  const r = mount(root, html);
+  return counts.map((n, i) => Array.from({ length: n }, (_, k) => r[`${ref}_${i}_${k}`]));
+}
+
+// ------------------------------------------------------------------ 1. 도입부: 오해 → 결론 → 문제 제기
 const hook = {
   id: 'hook',
   build(root, c) {
-    const H2 = c.at('h2'), H2b = c.at('h2', 1), H3 = c.at('h3'), H3b = c.at('h3', 1), H4 = c.at('h4');
+    const H1 = c.at('h1'), H2 = c.at('h2'), H2b = c.at('h2', 1), H2c = c.at('h2', 2), H3 = c.at('h3'), H3b = c.at('h3', 1);
+    const tNo = H1 + 1.45;
     const hd = header(root, {
-      y: 120,
-      eyebrow: `${icon('baby', { size: 28 })}예비·초보 부모 필수 · 2026년 9월 기준`,
-      eyeAt: 0.1,
+      y: 140, size: 100,
       lines: [
-        { html: '엄마·아빠 <span class="hl-coral">둘 다</span> 육아휴직을 쓰면', at: H2 },
-        { html: '달라지는 건 딱 <span class="hl-coral">2가지</span>', at: H2b },
-        { html: '핵심은 <span class="hl-mint">조건</span>! 콕 집어 정리할게요', at: H4 },
+        { html: '육아휴직 = <span class="hl-mint">1년</span>?', at: 0.12 },
+        { html: '<span class="hl-mint">1년</span>이 끝이 아니에요!', at: tNo },
+        { html: '엄마·아빠 <span class="hl-coral">둘 다</span> 쓰면', at: H2 },
+        { html: '문제는 이 <span class="hl-coral">‘조건’</span>!', at: H3 },
+        { html: '헷갈리는 포인트만 <span class="hl-coral">콕!</span>', at: H3b },
       ],
     });
+    // 18개월 블록 줄
+    const S = 72, G = 12, X0 = Math.round((1920 - (18 * (S + G) - G)) / 2), Y0 = 540;
+    let bl = '';
+    for (let i = 0; i < 18; i++) bl += `<div class="tile ${i < 12 ? 'mint' : 'gold'}" data-r="b${i}" style="left:${X0 + i * (S + G)}px;top:${Y0}px;width:${S}px;height:${S}px;border-radius:18px"></div>`;
+    const B = mount(root, `${bl}
+      <div class="abs center" data-r="l12" style="left:${X0}px;top:${Y0 + 100}px;width:${12 * (S + G) - G}px;height:50px;font-size:34px;font-weight:760;color:var(--mint-2);border-top:4px solid var(--mint);padding-top:10px">기본 1년 = 12개월</div>
+      <div class="abs center" data-r="l6" style="left:${X0 + 12 * (S + G)}px;top:${Y0 + 100}px;width:${6 * (S + G) - G}px;height:50px;font-size:34px;font-weight:800;color:var(--gold-2);border-top:4px solid var(--gold);padding-top:10px">+6개월</div>`);
+    const rowOut = H2 - 0.35;
+    // 결론 카드 2장
     const r = mount(root, `
-      <div class="abs col center" data-r="big" style="left:0;top:330px;width:1920px">
-        <div style="font-size:190px;font-weight:920;letter-spacing:-0.05em;color:var(--coral-2);line-height:1">결론부터!</div>
-        <div style="margin-top:34px;font-size:48px;font-weight:720;color:var(--ink-2)">육아휴직 <span class="hl-mint">1년 6개월</span> &amp; <span class="hl-gold">6+6</span>, 핵심만</div>
-      </div>
       <div class="abs" data-r="mom" style="left:470px;top:330px">${mom({ w: 380 })}</div>
       <div class="abs" data-r="dad" style="left:1070px;top:330px">${dad({ w: 380 })}</div>
       <div class="abs center" data-r="plus" style="left:900px;top:520px;width:120px;height:120px;border-radius:60px;background:#fff;box-shadow:var(--shadow);font-size:80px;font-weight:880;color:var(--coral)">+</div>
-
-      <div class="card" data-r="cA" style="left:170px;top:320px;width:770px;height:450px">
+      <div class="card" data-r="cA" style="left:170px;top:330px;width:770px;height:440px">
         <div class="abs row" style="left:48px;top:44px;gap:16px">
           <div class="icon-badge" style="width:78px;height:78px;border-radius:24px;background:var(--mint-soft);color:var(--mint-2)">${icon('calendar-plus', { size: 44 })}</div>
           <div class="chip mint" style="height:62px;font-size:34px;padding:0 26px">① 휴직 기간</div>
         </div>
-        <div class="abs row" style="left:0;top:178px;width:770px;justify-content:center;gap:26px;align-items:center">
-          <span style="font-size:74px;font-weight:800;color:var(--ink-3);text-decoration:line-through;text-decoration-thickness:6px">1년</span>
+        <div class="abs row" style="left:0;top:176px;width:770px;justify-content:center;gap:24px;align-items:center">
+          <span class="disp" style="font-size:74px;color:var(--ink-3);text-decoration:line-through;text-decoration-thickness:6px">1년</span>
           ${icon('arrow-right', { size: 64, stroke: 3, color: '#1FAF96' })}
-          <span style="font-size:104px;font-weight:900;color:var(--mint-2);letter-spacing:-0.04em">1년 6개월</span>
+          <span class="disp" style="font-size:108px;color:var(--mint-2)">1년 6개월</span>
         </div>
-        <div class="abs" style="left:0;top:330px;width:770px;text-align:center;font-size:32px;font-weight:650;color:var(--ink-2)">부모 각자 · 최대 6개월 추가</div>
+        <div class="abs" style="left:0;top:328px;width:770px;text-align:center;font-size:32px;font-weight:650;color:var(--ink-2)">부모 각자 · 부부 합산 최대 3년</div>
         <div class="abs chip ink" data-r="qA" style="right:36px;top:48px;height:56px;font-size:28px;padding:0 22px">${icon('key-round', { size: 28 })}조건은?</div>
       </div>
-      <div class="card" data-r="cB" style="left:980px;top:320px;width:770px;height:450px">
+      <div class="card" data-r="cB" style="left:980px;top:330px;width:770px;height:440px">
         <div class="abs row" style="left:48px;top:44px;gap:16px">
           <div class="icon-badge" style="width:78px;height:78px;border-radius:24px;background:var(--gold-soft);color:var(--gold-2)">${icon('coins', { size: 44 })}</div>
           <div class="chip gold" style="height:62px;font-size:34px;padding:0 26px">② 휴직 급여</div>
         </div>
-        <div class="abs col" style="left:0;top:160px;width:770px;align-items:center">
-          <div style="font-size:36px;font-weight:720;color:var(--ink-2)">첫 6개월 · 통상임금의</div>
-          <div style="font-size:124px;font-weight:900;color:var(--gold-2);letter-spacing:-0.04em;line-height:1.1">100%</div>
+        <div class="abs col" style="left:0;top:156px;width:770px;align-items:center">
+          <div style="font-size:36px;font-weight:720;color:var(--ink-2)">첫 6개월 상한</div>
+          <div class="disp" style="font-size:94px;color:var(--gold-2);line-height:1.2">최대 월 450만 원</div>
         </div>
-        <div class="abs" style="left:0;top:350px;width:770px;text-align:center;font-size:32px;font-weight:650;color:var(--ink-2)">6+6 부모육아휴직제 · 월 상한 적용</div>
+        <div class="abs" style="left:0;top:328px;width:770px;text-align:center;font-size:32px;font-weight:650;color:var(--ink-2)">6+6 부모육아휴직제 · 통상임금 100%</div>
         <div class="abs chip ink" data-r="qB" style="right:36px;top:48px;height:56px;font-size:28px;padding:0 22px">${icon('key-round', { size: 28 })}조건은?</div>
       </div>`);
-    c.sfx(0.2, 'pop', 0.6);
+    for (let i = 0; i < 12; i += 2) c.sfx(0.45 + i * 0.05 + 0.35, 'tick', 0.3);
+    c.sfx(tNo + 0.35, 'sparkle', 0.6);
     c.sfx(H2 + 0.1, 'whoosh', 0.3);
-    c.sfx(H3 + 0.1, 'pop', 0.6);
-    c.sfx(H3 + 0.9, 'sparkle', 0.45);
-    c.sfx(H3b + 0.1, 'pop', 0.6);
-    c.sfx(H3b + 1.4, 'coin', 0.6);
-    c.sfx(H4 + 0.3, 'click', 0.7);
-    c.sfx(H4 + 0.5, 'click', 0.6);
+    c.sfx(H2b + 0.1, 'pop', 0.6);
+    c.sfx(H2c + 0.1, 'pop', 0.6);
+    c.sfx(H2c + 1.6, 'coin', 0.6);
+    c.sfx(H3 + 0.45, 'click', 0.7);
+    c.sfx(H3 + 0.65, 'click', 0.6);
     return (t) => {
       hd(t);
-      const pout = H3 - 0.35;
-      enter(r.big, t, 0.15, { dy: 0, s0: 0.7, e: ease.outBack, out: H2 - 0.3, ods: 1.15, ody: 0 });
+      for (let i = 0; i < 18; i++) {
+        const t0 = i < 12 ? 0.45 + i * 0.05 : tNo + 0.2 + (i - 12) * 0.07;
+        drop(B[`b${i}`], t, t0, { h: 170, out: rowOut, od: 0.3 });
+      }
+      enter(B.l12, t, 1.35, { dy: 12, out: rowOut, od: 0.3 });
+      enter(B.l6, t, tNo + 0.9, { dy: 12, out: rowOut, od: 0.3 });
+      const pout = H2b - 0.35;
       enter(r.mom, t, H2 + 0.05, { dx: -140, dy: 0, out: pout, r: wave(t, 3.2, 2) });
       enter(r.dad, t, H2 + 0.2, { dx: 140, dy: 0, out: pout, r: wave(t, 3.6, -2) });
       pop(r.plus, t, H2 + 0.6, { out: pout });
       blink(r.mom, t, 1);
       blink(r.dad, t, 2);
-      enter(r.cA, t, H3, { dx: -60, dy: 30 });
-      enter(r.cB, t, H3b, { dx: 60, dy: 30 });
-      pop(r.qA, t, H4 + 0.3, { r: wave(t, 2.2, 3) });
-      pop(r.qB, t, H4 + 0.5, { r: wave(t, 2.4, -3) });
+      enter(r.cA, t, H2b, { dx: -60, dy: 30 });
+      enter(r.cB, t, H2c, { dx: 60, dy: 30 });
+      pop(r.qA, t, H3 + 0.45, { r: wave(t, 2.2, 3) });
+      pop(r.qB, t, H3 + 0.65, { r: wave(t, 2.4, -3) });
     };
   },
 };
@@ -143,10 +177,10 @@ const title = {
   build(root, c) {
     const T = c.start;
     const r = mount(root, `
-      <div class="abs col" style="left:150px;top:260px;width:1060px">
+      <div class="abs col" style="left:150px;top:270px;width:1060px">
         <div data-r="eye" class="eyebrow" style="align-self:flex-start">${icon('timer', { size: 28 })}3분 정리 · 2026년 9월 기준</div>
-        <div style="overflow:hidden;height:124px;margin-top:34px"><div data-r="l1" style="font-size:104px;font-weight:880;letter-spacing:-0.045em;line-height:1.15;white-space:nowrap">육아휴직 <span class="hl-mint">1년 6개월</span></div></div>
-        <div style="overflow:hidden;height:124px;margin-top:4px"><div data-r="l2" style="font-size:104px;font-weight:880;letter-spacing:-0.045em;line-height:1.15;white-space:nowrap"><span style="color:var(--ink-3);font-weight:700">&amp;</span> <span class="hl-gold">6+6</span> 부모육아휴직제</div></div>
+        <div style="overflow:hidden;height:130px;margin-top:30px"><div data-r="l1" class="disp" style="font-size:112px">육아휴직 <span class="hl-mint">1년 6개월</span></div></div>
+        <div style="overflow:hidden;height:130px;margin-top:0"><div data-r="l2" class="disp" style="font-size:112px"><span style="color:var(--ink-3)">&amp;</span> <span class="hl-gold">6+6</span> 부모육아휴직제</div></div>
       </div>
       <div class="abs" data-r="fam" style="left:1160px;top:300px">${family(680)}</div>`);
     c.sfx(T - 0.6, 'swell', 0.5);
@@ -161,69 +195,59 @@ const title = {
   },
 };
 
-// ------------------------------------------------------------------ PART 1 공용: 엄마/아빠 타일 줄
+// ------------------------------------------------------------------ PART 1 공용: 엄마/아빠 블록 줄
 const RS = 58, RG = 12;
 const ROW_X = 300;
-function parentRows(root, { n = 18, y1, y2, prefix }) {
+function parentRows(root, { n = 18, y1, y2, prefix, cls = 'empty' }) {
   const r = mount(root, `
     <div class="abs" data-r="${prefix}Av1" style="left:${ROW_X - 118}px;top:${y1 - 16}px">${avatar('mom', 90)}</div>
     <div class="abs" data-r="${prefix}Av2" style="left:${ROW_X - 118}px;top:${y2 - 16}px">${avatar('dad', 90)}</div>
     <div class="abs" data-r="${prefix}Lb1" style="left:${ROW_X + n * (RS + RG) + 14}px;top:${y1 + 6}px;font-size:34px;font-weight:820;white-space:nowrap"></div>
     <div class="abs" data-r="${prefix}Lb2" style="left:${ROW_X + n * (RS + RG) + 14}px;top:${y2 + 6}px;font-size:34px;font-weight:820;white-space:nowrap"></div>`);
-  const a = tileRow(root, { x: ROW_X, y: y1, n, size: RS, gap: RG, cls: 'empty', ref: `${prefix}A` });
-  const b = tileRow(root, { x: ROW_X, y: y2, n, size: RS, gap: RG, cls: 'empty', ref: `${prefix}B` });
+  const a = tileRow(root, { x: ROW_X, y: y1, n, size: RS, gap: RG, cls, ref: `${prefix}A` });
+  const b = tileRow(root, { x: ROW_X, y: y2, n, size: RS, gap: RG, cls, ref: `${prefix}B` });
   return { a, b, av1: r[`${prefix}Av1`], av2: r[`${prefix}Av2`], lb1: r[`${prefix}Lb1`], lb2: r[`${prefix}Lb2`] };
 }
 
-// ------------------------------------------------------------------ 3. 기본 1년 → 최대 1년 6개월
+// ------------------------------------------------------------------ 3. 기본 1년 + 조건 채우면 6개월
 const basic = {
   id: 'basic',
   build(root, c) {
     const B2 = c.at('b1', 1), B3 = c.at('b1', 2);
-    const tMom = B2 + 0.3, tDad = B2 + 1.3;
+    const tMom = B2 + 0.15, tDad = B2 + 0.85, tPlus = B3 + 0.3;
     const hd = header(root, {
-      y: 140,
-      eyebrow: `${icon('baby', { size: 28 })}자녀 1명당 · 부모 각자`,
-      eyeAt: c.in + 0.1,
+      y: 150,
       lines: [
-        { html: '육아휴직, 기본은 <span class="hl-mint">1년</span>', at: c.in + 0.2 },
-        { html: '2025년 2월부터 <span class="hl-gold">최대 1년 6개월</span>', at: B3 },
+        { html: '기본은 부모 각자 <span class="hl-mint">1년</span>', at: c.in + 0.15 },
+        { html: '조건 채우면 <span class="hl-gold">+6개월</span>', at: B3 },
       ],
     });
     const box = mount(root, '<div class="card" data-r="box" style="left:150px;top:380px;width:1620px;height:380px"></div>').box;
-    const rows = parentRows(root, { y1: 470, y2: 620, prefix: 'p' });
+    const rows = parentRows(root, { y1: 470, y2: 620, prefix: 'p', cls: 'coral' });
+    rows.b.forEach((el) => setCls(el, 'blue'));
+    rows.a.forEach((el, i) => { if (i >= 12) { setCls(el, 'locked'); el.innerHTML = LOCK; } });
+    rows.b.forEach((el, i) => { if (i >= 12) { setCls(el, 'locked'); el.innerHTML = LOCK; } });
     const stamp = mount(root, `
-      <div class="abs col center" data-r="stamp" style="left:1420px;top:282px;width:250px;height:120px;border-radius:22px;border:5px solid var(--coral);color:var(--coral-2);background:rgba(255,255,255,0.9);font-weight:880">
+      <div class="abs col center" data-r="stamp" style="left:1420px;top:282px;width:250px;height:120px;border-radius:22px;border:5px solid var(--coral);color:var(--coral-2);background:rgba(255,255,255,0.92);font-weight:880">
         <div style="font-size:26px;letter-spacing:0.02em">2025. 2. 23.</div><div style="font-size:40px;letter-spacing:0.1em">시행</div>
       </div>`).stamp;
-    for (let i = 0; i < 12; i++) { c.sfx(tMom + i * 0.06, 'tick', 0.2); c.sfx(tDad + i * 0.06, 'tick', 0.2); }
-    c.sfx(B3 + 0.2, 'pop', 0.7);
-    c.sfx(B3 + 0.5, 'sparkle', 0.5);
+    c.sfx(tMom + 0.3, 'tick', 0.3); c.sfx(tMom + 0.7, 'tick', 0.3); c.sfx(tDad + 0.3, 'tick', 0.3); c.sfx(tDad + 0.7, 'tick', 0.3);
+    c.sfx(tPlus + 0.2, 'pop', 0.6);
+    c.sfx(B3 + 0.15, 'click', 0.6);
     return (t) => {
       hd(t);
       enter(box, t, c.in, { dy: 40 });
       enter(rows.av1, t, c.in + 0.2, { dx: -24, dy: 0 });
       enter(rows.av2, t, c.in + 0.3, { dx: -24, dy: 0 });
-      const fill = (arr, t0, color) => arr.forEach((el, i) => {
-        if (i < 12) {
-          const on = t >= t0 + i * 0.06;
-          setCls(el, on ? color : 'empty');
-          enter(el, t, c.in + 0.25 + i * 0.015, { dy: 16, s: on ? 1 + 0.12 * (1 - P(t, t0 + i * 0.06, 0.3)) : 1 });
-        } else {
-          setCls(el, 'locked');
-          setHtml(el, LOCK);
-          enter(el, t, B3 + 0.4 + (i - 12) * 0.06, { dy: 20, s0: 0.4, e: ease.outBack });
-        }
-      });
-      fill(rows.a, tMom, 'coral');
-      fill(rows.b, tDad, 'blue');
-      const unlocked = t >= B3 + 0.6;
-      setHtml(rows.lb1, unlocked ? '<span class="hl-gold">1년 6개월</span>' : '<span class="hl-coral">엄마 1년</span>');
-      setHtml(rows.lb2, unlocked ? '<span class="hl-gold">1년 6개월</span>' : '<span class="hl-blue">아빠 1년</span>');
-      const lx = lerp(-6 * (RS + RG), 0, P(t, B3 + 0.5, 0.6, ease.inOutCubic));
-      enter(rows.lb1, t, tMom + 0.8, { x: lx, dx: -16, dy: 0 });
-      enter(rows.lb2, t, tDad + 0.8, { x: lx, dx: -16, dy: 0 });
-      pop(stamp, t, B3 + 0.2, { r: -8, s0: 1.8, e: ease.outCubic, d: 0.35 });
+      rows.a.forEach((el, i) => drop(el, t, i < 12 ? tMom + i * 0.045 : tPlus + (i - 12) * 0.07, { h: 130 }));
+      rows.b.forEach((el, i) => drop(el, t, i < 12 ? tDad + i * 0.045 : tPlus + 0.25 + (i - 12) * 0.07, { h: 130 }));
+      const plus = t >= tPlus + 0.6;
+      setHtml(rows.lb1, plus ? '<span class="hl-gold">1년 6개월</span>' : '<span class="hl-coral">엄마 1년</span>');
+      setHtml(rows.lb2, plus ? '<span class="hl-gold">1년 6개월</span>' : '<span class="hl-blue">아빠 1년</span>');
+      const lx = lerp(-6 * (RS + RG), 0, P(t, tPlus + 0.5, 0.6, ease.inOutCubic));
+      enter(rows.lb1, t, tMom + 0.9, { x: lx, dx: -16, dy: 0 });
+      enter(rows.lb2, t, tDad + 0.9, { x: lx, dx: -16, dy: 0 });
+      pop(stamp, t, B3 + 0.1, { r: -8, s0: 1.8, e: ease.outCubic, d: 0.35 });
     };
   },
 };
@@ -234,10 +258,8 @@ const conditions = {
   build(root, c) {
     const opens = [c.at('c1', 1), c.at('c1', 2), c.at('c1', 3)];
     const hd = header(root, {
-      y: 128,
-      eyebrow: `${icon('key-round', { size: 28 })}+6개월 여는 열쇠`,
-      eyeAt: c.in,
-      lines: [{ html: '추가 조건은 <span class="hl-gold">셋 중 하나</span>만!', at: c.in + 0.1 }],
+      y: 150,
+      lines: [{ html: '셋 중 <span class="hl-gold">하나만</span> 해당돼도 1년 6개월', at: c.in + 0.1 }],
     });
     const cards = [
       {
@@ -261,7 +283,7 @@ const conditions = {
       <div class="abs" data-r="k${i}" style="left:${X[i]}px;top:320px;width:${W}px;height:500px">
         <div class="card col center" data-r="k${i}f" style="left:0;top:0;width:${W}px;height:500px;background:rgba(255,255,255,0.75)">
           <div class="icon-badge" style="width:120px;height:120px;border-radius:60px;background:var(--gold-soft);color:var(--gold-2)">${icon('lock', { size: 60 })}</div>
-          <div style="margin-top:26px;font-size:40px;font-weight:820;color:var(--ink-3)">조건 ${k.n}</div>
+          <div class="disp" style="margin-top:26px;font-size:44px;color:var(--ink-3)">조건 ${k.n}</div>
         </div>
         <div class="card col" data-r="k${i}b" style="left:0;top:0;width:${W}px;height:500px;align-items:center;padding-top:40px">
           <div class="abs center" style="left:28px;top:28px;width:60px;height:60px;border-radius:30px;background:var(--${k.color});color:#fff;font-size:32px;font-weight:880">${k.n}</div>
@@ -298,12 +320,10 @@ const both = {
     const tMom = D1 + 0.9, tDad = D1 + 1.7;
     const unlock = D2 + 0.1;
     const hd = header(root, {
-      y: 140,
-      eyebrow: `<span class="chip mint" style="height:38px;font-size:22px;padding:0 14px">조건 1</span>맞벌이 부부라면`,
-      eyeAt: c.in + 0.05,
+      y: 150,
       lines: [
         { html: '엄마 <span class="hl-coral">3개월</span> + 아빠 <span class="hl-blue">3개월</span> 이상이면?', at: c.in + 0.1 },
-        { html: '각자 <span class="hl-gold">1년 6개월</span>, 합산 <span class="hl-gold">최대 3년</span>', at: D2 },
+        { html: '각자 <span class="hl-gold">1년 6개월</span>, 부부 <span class="hl-gold">최대 3년</span>', at: D2 },
       ],
     });
     const box = mount(root, '<div class="card" data-r="box" style="left:150px;top:380px;width:1620px;height:380px"></div>').box;
@@ -350,57 +370,81 @@ const both = {
   },
 };
 
-// ------------------------------------------------------------------ 6. 주의할 점 2가지
-const faq = {
-  id: 'faq',
+// ------------------------------------------------------------------ 6. 헷갈리는 포인트 1: 배우자가 육아휴직을 못 쓴다면?
+const qa1 = {
+  id: 'qa1',
   build(root, c) {
-    const qs = [
-      {
-        q: '배우자가 <b>자영업자·전업주부</b>라면?',
-        hint: '배우자가 근로자가 아니라 육아휴직을 쓸 수 없는 경우',
-        a: '<span style="color:var(--red)">조건 1 불가</span> → 기본 1년',
-        sub: '한부모·중증 장애아동 부모는 1년 6개월 가능',
-        ic: 'briefcase', color: 'coral', tq: c.at('f1'), ta: c.at('f1', 1),
-      },
-      {
-        q: '추가 6개월, <b>언제 신청</b>하나요?',
-        hint: '배우자의 육아휴직 사용 내역을 증빙으로 제출',
-        a: '배우자 <span class="hl-blue">3개월 사용 확인 후</span>',
-        sub: '휴직 순서를 미리 계획해 두세요',
-        ic: 'calendar-check', color: 'blue', tq: c.at('f2'), ta: c.at('f2', 1),
-      },
-    ];
-    const hd = header(root, {
-      y: 128,
-      eyebrow: `${icon('triangle-alert', { size: 28 })}헷갈리는 포인트`,
-      eyeAt: c.in,
-      lines: [{ html: '주의할 점 <span class="hl-coral">2가지</span>', at: c.in + 0.1 }],
-    });
-    const Y = [340, 580];
-    const r = mount(root, qs.map((k, i) => `
-      <div class="card" data-r="q${i}" style="left:150px;top:${Y[i]}px;width:1620px;height:196px">
-        <div class="abs center" style="left:36px;top:54px;width:88px;height:88px;border-radius:26px;background:var(--${k.color}-soft);color:var(--${k.color}-2)">${icon(k.ic, { size: 46 })}</div>
-        <div class="abs" style="left:150px;top:42px;font-size:24px;font-weight:800;color:var(--ink-3);letter-spacing:0.04em">주의 ${i + 1}</div>
-        <div class="abs" style="left:150px;top:74px;font-size:40px;font-weight:700;letter-spacing:-0.03em;white-space:nowrap">${k.q.replace(/<b>/g, '<b style="font-weight:850">')}</div>
-        <div class="abs" style="left:150px;top:134px;font-size:24px;font-weight:600;color:var(--ink-3);white-space:nowrap">${k.hint}</div>
-        <div class="abs" data-r="a${i}" style="left:860px;top:26px;width:736px;height:144px;border-radius:26px;background:#F7F4EF">
-          <div class="abs center" style="left:24px;top:38px;width:68px;height:68px;border-radius:34px;background:var(--ink);color:#fff;font-size:30px;font-weight:880">A</div>
-          <div class="abs" style="left:116px;top:26px;font-size:38px;font-weight:840;letter-spacing:-0.03em;white-space:nowrap">${k.a}</div>
-          <div class="abs" style="left:116px;top:86px;font-size:25px;font-weight:620;color:var(--ink-2);white-space:nowrap">${k.sub}</div>
-        </div>
-      </div>`).join(''));
-    qs.forEach((k) => { c.sfx(k.tq, 'pop', 0.45); c.sfx(k.ta, 'click', 0.6); });
+    const Qa = c.at('a1q', 1), A = c.at('a1a'), A2 = c.at('a1a', 1);
+    const head = qaHead(root, { n: 1, q: '배우자가 자영업자·전업주부라면?', tChip: c.in, tQ: Qa });
+    const who = [['briefcase', '자영업자'], ['laptop', '프리랜서'], ['house', '전업주부']];
+    const r = mount(root, `
+      <div class="abs disp" data-r="ans" style="left:150px;top:352px;font-size:86px;color:var(--red)">첫 번째 조건으론 연장 불가</div>
+      ${who.map(([ic, name], i) => `
+        <div class="card col center" data-r="w${i}" style="left:${150 + i * 260}px;top:510px;width:230px;height:250px">
+          <div class="icon-badge" style="width:110px;height:110px;border-radius:32px;background:#EEF0F3;color:var(--ink-2)">${icon(ic, { size: 60 })}</div>
+          <div style="margin-top:22px;font-size:32px;font-weight:780">${name}</div>
+          <div class="abs" data-r="x${i}" style="right:-14px;top:-14px;width:60px;height:60px">${NO_BADGE}</div>
+        </div>`).join('')}
+      <div class="card" data-r="note" style="left:980px;top:510px;width:790px;height:250px;padding:40px 44px">
+        <div class="row" style="gap:14px;font-size:32px;font-weight:780"><span style="width:40px;height:40px;display:inline-block">${OK_BADGE}</span>이런 경우는 가능해요</div>
+        <div style="margin-top:20px;font-size:29px;font-weight:640;color:var(--ink-2);line-height:1.6">· 배우자가 공무원·교원이면 그 육아휴직도 인정<br>· 한부모·중증 장애아동 부모는 해당되면 1년 6개월</div>
+      </div>`);
+    c.sfx(c.in + 0.1, 'pop', 0.45);
+    c.sfx(A + 0.1, 'click', 0.6);
+    for (let i = 0; i < 3; i++) c.sfx(A2 + 0.2 + i * 0.14, 'pop', 0.35);
     return (t) => {
-      hd(t);
-      qs.forEach((k, i) => {
-        enter(r[`q${i}`], t, k.tq - 0.3, { dx: 60, dy: 0, e: ease.outCubic, d: 0.55 });
-        enter(r[`a${i}`], t, k.ta, { dx: -30, dy: 0, s0: 0.96 });
-      });
+      head(t);
+      pop(r.ans, t, A, { s0: 0.8, d: 0.5 });
+      for (let i = 0; i < 3; i++) {
+        drop(r[`w${i}`], t, A + 0.3 + i * 0.15, { h: 120 });
+        pop(r[`x${i}`], t, A2 + 0.2 + i * 0.14, {});
+      }
+      enter(r.note, t, A2 + 1.0, { dx: 40, dy: 0 });
     };
   },
 };
 
-// ------------------------------------------------------------------ 7. 6+6 개념
+// ------------------------------------------------------------------ 7. 헷갈리는 포인트 2: 미리 신청할 수 있나? (함정)
+const qa2 = {
+  id: 'qa2',
+  build(root, c) {
+    const Qa = c.at('a2q', 1), A = c.at('a2a'), A2 = c.at('a2a', 1), A3 = c.at('a2a', 2);
+    const head = qaHead(root, { n: 2, q: '배우자가 곧 3개월을 채울 예정이면, 미리 신청?', tChip: c.in, tQ: Qa, qSize: 46 });
+    const blk = (x, cls, label = '') => `<div class="block ${cls}" style="left:${x}px;top:120px;width:118px;height:104px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:var(--blue-2)">${label}</div>`;
+    const r = mount(root, `
+      <div class="abs disp" data-r="ans" style="left:150px;top:352px;font-size:86px;color:var(--red)">아니요, 함정 주의!</div>
+      <div class="abs" data-r="exp" style="left:150px;top:470px;font-size:40px;font-weight:760;letter-spacing:-0.03em;white-space:nowrap">추가 6개월 신청 시점에 <span class="mark">배우자 3개월 사용이 이미 확인</span>돼야 해요</div>
+      <div class="card" data-r="p1" style="left:150px;top:570px;width:790px;height:290px">
+        <div class="abs" style="left:44px;top:38px;font-size:32px;font-weight:780">아빠 2개월 사용 + 1개월 예정</div>
+        <div data-r="p1b">${blk(44, 'blue')}${blk(176, 'blue')}${blk(308, 'ghost', '예정')}</div>
+        <div class="abs" data-r="p1x" style="left:600px;top:112px;width:120px;height:120px">${NO_BADGE}</div>
+      </div>
+      <div class="card" data-r="p2" style="left:980px;top:570px;width:790px;height:290px">
+        <div class="abs" style="left:44px;top:38px;font-size:32px;font-weight:780">아빠 3개월 사용 완료</div>
+        <div data-r="p2b">${blk(44, 'blue')}${blk(176, 'blue')}${blk(308, 'blue')}</div>
+        <div class="abs" data-r="p2x" style="left:600px;top:112px;width:120px;height:120px">${OK_BADGE}</div>
+      </div>`);
+    const blocks1 = [...r.p1b.children], blocks2 = [...r.p2b.children];
+    const tP1 = A3, tP2 = A3 + 1.5;
+    c.sfx(c.in + 0.1, 'pop', 0.45);
+    c.sfx(A + 0.1, 'click', 0.7);
+    c.sfx(tP1 + 1.1, 'pop', 0.55);
+    c.sfx(tP2 + 1.1, 'ding', 0.5);
+    return (t) => {
+      head(t);
+      pop(r.ans, t, A, { s0: 0.8, d: 0.5 });
+      enter(r.exp, t, A2, { dy: 18 });
+      enter(r.p1, t, tP1, { dy: 30 });
+      blocks1.forEach((el, i) => drop(el, t, tP1 + 0.25 + i * 0.12, { h: 90 }));
+      pop(r.p1x, t, tP1 + 1.1, {});
+      enter(r.p2, t, tP2, { dy: 30 });
+      blocks2.forEach((el, i) => drop(el, t, tP2 + 0.25 + i * 0.12, { h: 90 }));
+      pop(r.p2x, t, tP2 + 1.1, {});
+    };
+  },
+};
+
+// ------------------------------------------------------------------ 8. 6+6 개념
 const AX = { x0: 330, x1: 1590, months: 24 };
 const mx = (m) => AX.x0 + ((AX.x1 - AX.x0) * m) / AX.months;
 
@@ -421,23 +465,22 @@ function ageAxis(root, { y, ref, until = 24, labelEvery = 3 }) {
 const concept66 = {
   id: 'concept66',
   build(root, c) {
-    const K1b = c.at('k1', 1), K2 = c.at('k2'), K2b = c.at('k2', 1), K2c = c.at('k2', 2), K3 = c.at('k3');
+    const K1b = c.at('k1', 1), K2 = c.at('k2'), K2b = c.at('k2', 1), K2c = c.at('k2', 2);
     const hd = header(root, {
-      y: 130,
+      y: 140,
       lines: [
-        { html: '<span class="hl-gold">생후 18개월</span> 전에 부모 모두 휴직 시작', at: K2 },
-        { html: '각자 <span class="hl-gold">첫 6개월</span> 급여 = 통상임금 <span class="hl-gold">100%</span>', at: K2c },
-        { html: '<span class="hl-mint">동시</span>에 써도, <span class="hl-mint">차례로</span> 써도 OK', at: K3 },
+        { html: '<span class="hl-gold">생후 18개월</span> 전에 부모 모두 시작하면', at: K2 },
+        { html: '각자 <span class="hl-gold">첫 6개월</span> = 통상임금 <span class="hl-gold">100%</span>', at: K2c },
       ],
     });
     const logo = mount(root, `
       <div class="abs col" style="left:0;top:250px;width:1920px;align-items:center">
         <div class="row" style="gap:40px">
-          <div class="col center" data-r="lg1"><div class="center" style="width:250px;height:250px;border-radius:125px;background:linear-gradient(160deg,#FF9A86,var(--coral));color:#fff;font-size:180px;font-weight:900;box-shadow:0 24px 50px rgba(255,125,102,0.35)">6</div><div style="margin-top:22px;font-size:34px;font-weight:780;color:var(--coral-2)">엄마 첫 6개월</div></div>
-          <div data-r="lgp" style="font-size:130px;font-weight:880;color:var(--ink-3);margin-top:-60px">+</div>
-          <div class="col center" data-r="lg2"><div class="center" style="width:250px;height:250px;border-radius:125px;background:linear-gradient(160deg,#74A8FA,var(--blue));color:#fff;font-size:180px;font-weight:900;box-shadow:0 24px 50px rgba(76,141,246,0.35)">6</div><div style="margin-top:22px;font-size:34px;font-weight:780;color:var(--blue-2)">아빠 첫 6개월</div></div>
+          <div class="col center" data-r="lg1"><div class="center disp" style="width:250px;height:250px;border-radius:125px;background:linear-gradient(160deg,#FF9A86,var(--coral));color:#fff;font-size:190px;box-shadow:0 24px 50px rgba(255,125,102,0.35)">6</div><div style="margin-top:22px;font-size:34px;font-weight:780;color:var(--coral-2)">엄마 첫 6개월</div></div>
+          <div data-r="lgp" class="disp" style="font-size:140px;color:var(--ink-3);margin-top:-60px">+</div>
+          <div class="col center" data-r="lg2"><div class="center disp" style="width:250px;height:250px;border-radius:125px;background:linear-gradient(160deg,#74A8FA,var(--blue));color:#fff;font-size:190px;box-shadow:0 24px 50px rgba(76,141,246,0.35)">6</div><div style="margin-top:22px;font-size:34px;font-weight:780;color:var(--blue-2)">아빠 첫 6개월</div></div>
         </div>
-        <div data-r="lgT" style="margin-top:40px;font-size:64px;font-weight:860;letter-spacing:-0.035em">6+6 <span class="hl-gold">부모육아휴직제</span></div>
+        <div data-r="lgT" class="disp" style="margin-top:40px;font-size:70px">6+6 <span class="hl-gold">부모육아휴직제</span></div>
       </div>`);
     const Y = 610;
     const ax = ageAxis(root, { y: Y, ref: 'ax' });
@@ -453,8 +496,8 @@ const concept66 = {
       <div class="abs center" data-r="barD" style="left:${mx(12)}px;top:${Y + 66}px;width:0;height:64px;border-radius:14px;background:linear-gradient(90deg,#74A8FA,var(--blue));color:#fff;font-size:26px;font-weight:800;white-space:nowrap;overflow:hidden">아빠 첫 6개월</div>
       <div class="abs chip ink" data-r="p100" style="left:${mx(20) - 70}px;top:${Y + 60}px;height:76px;font-size:36px;padding:0 30px">${icon('coins', { size: 38 })}통상임금 100%</div>
       <div class="abs col" style="left:${mx(20) - 90}px;top:${Y - 210}px;gap:14px;align-items:flex-start">
-        <div class="chip white" data-r="md1">${icon('circle-check', { size: 30, color: '#1FAF96' })}동시 사용</div>
-        <div class="chip white" data-r="md2">${icon('circle-check', { size: 30, color: '#1FAF96' })}순차 사용</div>
+        <div class="chip white" data-r="md1">${icon('circle-check', { size: 30, color: '#1FAF96' })}동시 사용 OK</div>
+        <div class="chip white" data-r="md2">${icon('circle-check', { size: 30, color: '#1FAF96' })}순차 사용 OK</div>
       </div>`);
     const t100 = K2c + 1.6;
     c.sfx(c.in + 0.2, 'pop', 0.6);
@@ -462,8 +505,8 @@ const concept66 = {
     c.sfx(K2b + 0.2, 'pop', 0.5);
     c.sfx(K2b + 0.8, 'pop', 0.5);
     c.sfx(t100, 'coin', 0.7);
-    c.sfx(K3 + 0.1, 'tick', 0.5);
-    c.sfx(K3 + 1.0, 'tick', 0.5);
+    c.sfx(t100 + 0.9, 'tick', 0.45);
+    c.sfx(t100 + 1.3, 'tick', 0.45);
     return (t) => {
       hd(t);
       const out = K2 - 0.45;
@@ -474,232 +517,252 @@ const concept66 = {
       enter(ax.ax, t, K2 - 0.1, { dy: 20, s0: 1 });
       enter(z.zone, t, K2 + 0.3, { dy: 30, s0: 1 });
       enter(z.zoneLine, t, K2 + 0.5, { dy: 0, s0: 1 });
-      enter(z.pinM, t, K2b + 0.2, { dy: -60, s0: 0.8, e: ease.outBack });
-      enter(z.pinD, t, K2b + 0.8, { dy: -60, s0: 0.8, e: ease.outBack });
+      drop(z.pinM, t, K2b + 0.2, { h: 120 });
+      drop(z.pinD, t, K2b + 0.8, { h: 120 });
       growW(z.barM, t, K2c + 0.1, 0.8, bw);
       growW(z.barD, t, K2c + 0.5, 0.8, bw);
       pop(z.p100, t, t100, {});
-      enter(z.md1, t, K3 + 0.1, { dx: 30, dy: 0 });
-      enter(z.md2, t, K3 + 1.0, { dx: 30, dy: 0 });
+      enter(z.md1, t, t100 + 0.9, { dx: 30, dy: 0 });
+      enter(z.md2, t, t100 + 1.3, { dx: 30, dy: 0 });
       blink(z.pinM, t, 1);
       blink(z.pinD, t, 2);
     };
   },
 };
 
-// ------------------------------------------------------------------ 8. 월 상한액 + 일반 급여 비교
-const chart = {
-  id: 'caps',
+// ------------------------------------------------------------------ 9. 월 상한액 계단 (블록 1개 = 50만 원)
+const stairsScene = {
+  id: 'stairs',
   build(root, c) {
-    const M1 = c.at('m1'), M2 = c.at('m1', 1), M3 = c.at('m1', 2), N1 = c.at('n1'), N2 = c.at('n1', 1);
-    const hd = header(root, {
-      y: 118,
-      lines: [
-        { html: '6+6 <span class="hl-gold">월 상한액</span>', at: c.in + 0.05 },
-        { html: '<span style="color:var(--ink-3)">일반 급여</span> vs <span class="hl-gold">6+6</span>', at: N1 - 0.1 },
-      ],
+    const M1 = c.at('m1'), M2 = c.at('m1', 1), M3 = c.at('m1', 2), M4 = c.at('m1', 3), N1 = c.at('m2'), N2 = c.at('m2', 1);
+    const hd = header(root, { y: 140, lines: [{ html: '첫 6개월, 상한은 <span class="hl-gold">계단처럼</span>', at: c.in + 0.05 }] });
+    const V = [250, 250, 300, 350, 400, 450];
+    const base = 880, bw = 132, bh = 34, gap = 6, pitch = 178, x0 = 190;
+    const cols = stairs(root, { x0, base, bw, bh, gap, pitch, counts: V.map((v) => v / 50), ref: 's' });
+    const colAt = [M2 + 0.35, M2 + 0.95, M3 + 0.25, M3 + 0.85, M3 + 1.45, M4 + 0.3];
+    let labels = '';
+    V.forEach((v, i) => {
+      const top = base - (v / 50) * (bh + gap);
+      labels += `<div class="abs disp num" data-r="v${i}" style="left:${x0 + i * pitch - 30}px;top:${top - 76}px;width:${bw + 60}px;text-align:center;font-size:56px;color:var(--gold-2)"><span data-r="vn${i}">0</span><span style="font-size:28px;margin-left:2px">만</span></div>
+        <div class="axis-label" style="left:${x0 + i * pitch}px;top:${base + 14}px;width:${bw}px">${i + 1}개월</div>`;
     });
-    const gold = [250, 250, 300, 350, 400, 450];
-    const gray = [250, 250, 250, 200, 200, 200];
-    const CX = 150, CY = 270, CW = 1080, CH = 620;
-    const px0 = 110, base = 530, scale = 0.76;
-    const gw = 150, bw = 62;
-    const gx = (i) => px0 + 58 + i * gw;
-    let grid = '';
-    for (let v = 100; v <= 500; v += 100) {
-      grid += `<div class="abs" style="left:${px0}px;top:${base - v * scale}px;width:${CW - px0 - 50}px;height:2px;background:#EFEAE3"></div>
-        <div class="axis-label" style="left:${px0 - 90}px;top:${base - v * scale - 16}px;width:76px;text-align:right">${v}</div>`;
-    }
-    let bars = '';
-    for (let i = 0; i < 6; i++) {
-      bars += `
-        <div class="bar gray" data-r="gy${i}" style="left:${gx(i)}px;top:${base}px;width:${bw}px;height:0"></div>
-        <div class="bar gold" data-r="gd${i}" style="left:${gx(i)}px;top:${base}px;width:${bw}px;height:0"></div>
-        <div class="abs" data-r="df${i}" style="left:${gx(i)}px;top:${base}px;width:${bw}px;height:0;border-radius:14px 14px 0 0;background:repeating-linear-gradient(135deg,rgba(34,181,115,0.85) 0 10px,rgba(34,181,115,0.55) 10px 20px)"></div>
-        <div class="bar-label num" data-r="vl${i}" style="left:${gx(i) - 40}px;top:${base - gold[i] * scale - 50}px;width:${bw + 80}px;color:var(--gold-2)">${gold[i]}</div>
-        <div class="bar-label num" data-r="gl${i}" style="left:${gx(i) - 40}px;top:${base - gray[i] * scale - 44}px;width:${bw + 80}px;font-size:26px;color:var(--ink-3)">${gray[i]}</div>
-        <div class="bar-label num" data-r="dl${i}" style="left:${gx(i) - 30}px;top:${base - gold[i] * scale - 96}px;width:${bw + 100}px;font-size:28px;color:var(--green)">+${gold[i] - gray[i]}</div>
-        <div class="axis-label" style="left:${gx(i) + bw / 2 - 60}px;top:${base + 16}px;width:120px">${i + 1}개월</div>`;
-    }
-    const r = mount(root, `
-      <div class="card" data-r="card" style="left:${CX}px;top:${CY}px;width:${CW}px;height:${CH}px">
-        <div class="abs row" data-r="legend" style="left:${px0}px;top:26px;gap:16px">
-          <div class="chip gold" style="height:44px;font-size:23px;padding:0 16px"><i style="width:18px;height:18px;border-radius:5px;background:var(--gold)"></i>6+6 특례</div>
-          <div class="chip" style="height:44px;font-size:23px;padding:0 16px;background:#EEF0F3;color:var(--ink-2)"><i style="width:18px;height:18px;border-radius:5px;background:#BCC3CD"></i>일반 육아휴직 급여</div>
+    const r = mount(root, `${labels}
+      <div class="abs" style="left:${x0 - 20}px;top:${base}px;width:${5 * pitch + bw + 40}px;height:4px;border-radius:2px;background:#D5DAE1"></div>
+      <div class="abs row" data-r="legend" style="left:${x0}px;top:290px;gap:14px;font-size:28px;font-weight:720;color:var(--ink-2)"><div class="block gold" style="position:relative;width:64px;height:24px;border-radius:8px"></div>블록 1개 = 50만 원</div>
+      <div class="card col" data-r="side" style="left:1360px;top:300px;width:420px;height:560px;align-items:center;padding-top:46px">
+        <div style="font-size:30px;font-weight:720;color:var(--ink-2)">한 사람당 최대</div>
+        <div class="row" style="align-items:baseline;gap:6px"><span class="disp num" data-r="tot1" style="font-size:104px;color:var(--gold-2)">0</span><span style="font-size:38px;font-weight:820;color:var(--gold-2)">만 원</span></div>
+        <div data-r="s2" class="col center" style="margin-top:26px;padding-top:26px;border-top:3px solid var(--line);width:340px">
+          <div class="row" style="gap:10px">${avatar('mom', 60)}${avatar('dad', 60)}</div>
+          <div style="margin-top:12px;font-size:30px;font-weight:720;color:var(--ink-2)">부부 합산 최대</div>
+          <div class="row" style="align-items:baseline;gap:6px"><span class="disp num" data-r="tot2" style="font-size:88px;color:var(--gold-2)">0</span><span style="font-size:34px;font-weight:820;color:var(--gold-2)">만 원</span></div>
         </div>
-        <div class="abs" style="right:40px;top:34px;font-size:22px;font-weight:650;color:var(--ink-3)">단위: 만 원</div>
-        ${grid}
-        <div class="abs" style="left:${px0}px;top:${base}px;width:${CW - px0 - 50}px;height:3px;background:#D5DAE1"></div>
-        ${bars}
-      </div>
-      <div class="card col" data-r="side" style="left:1270px;top:${CY}px;width:500px;height:${CH}px;align-items:center;padding-top:44px">
-        <div class="row" style="gap:16px">
-          <div class="icon-badge" style="width:76px;height:76px;border-radius:24px;background:var(--gold-soft);color:var(--gold-2)">${icon('coins', { size: 42 })}</div>
-          <div class="col"><div style="font-size:30px;font-weight:820">통상임금 100%</div><div style="font-size:24px;font-weight:650;color:var(--ink-3)">월 상한 250 → 450만 원</div></div>
-        </div>
-        <div data-r="s1" class="col center" style="margin-top:30px;padding-top:26px;border-top:3px solid var(--line);width:400px">
-          <div class="small" style="font-size:28px;color:var(--ink-2)">한 사람당 최대</div>
-          <div class="row" style="align-items:baseline;gap:6px;margin-top:2px"><span class="num" data-r="tot1" style="font-size:92px;font-weight:880;color:var(--gold-2);letter-spacing:-0.04em">0</span><span style="font-size:38px;font-weight:820;color:var(--gold-2)">만 원</span></div>
-        </div>
-        <div data-r="s2" class="col center" style="margin-top:14px;padding-top:22px;border-top:3px solid var(--line);width:400px">
-          <div class="row" style="gap:10px;align-items:center">${avatar('mom', 56)}${avatar('dad', 56)}<span class="small" style="font-size:28px;color:var(--ink-2);margin-left:8px">부부 합산 최대</span></div>
-          <div class="row" style="align-items:baseline;gap:6px;margin-top:2px"><span class="num" data-r="tot2" style="font-size:80px;font-weight:880;color:var(--gold-2);letter-spacing:-0.04em">0</span><span style="font-size:36px;font-weight:820;color:var(--gold-2)">만 원</span></div>
-        </div>
-      </div>
-      <div class="card col" data-r="side2" style="left:1270px;top:${CY}px;width:500px;height:${CH}px;padding:46px 44px 0">
-        <div class="small" style="font-size:26px;color:var(--ink-3)">첫 6개월 최대 (1인)</div>
-        <div data-r="cmpA" class="row" style="justify-content:space-between;margin-top:18px;height:70px">
-          <span style="font-size:32px;font-weight:750;color:var(--ink-2)">일반 급여</span>
-          <span><span class="num" style="font-size:52px;font-weight:860;color:var(--ink-2)">1,350</span><span style="font-size:28px;font-weight:780;color:var(--ink-2)"> 만 원</span></span>
-        </div>
-        <div data-r="cmpB" class="row" style="justify-content:space-between;margin-top:6px;height:70px">
-          <span style="font-size:32px;font-weight:750;color:var(--gold-2)">6+6 특례</span>
-          <span><span class="num" style="font-size:52px;font-weight:860;color:var(--gold-2)">2,000</span><span style="font-size:28px;font-weight:780;color:var(--gold-2)"> 만 원</span></span>
-        </div>
-        <div data-r="cmpC" class="col center" style="margin-top:34px;height:190px;border-radius:30px;background:rgba(34,181,115,0.10)">
-          <div style="font-size:28px;font-weight:750;color:var(--green)">한 사람당 최대</div>
-          <div class="row" style="align-items:baseline"><span class="num" data-r="diff" style="font-size:96px;font-weight:890;color:var(--green);letter-spacing:-0.04em">+0</span><span style="font-size:40px;font-weight:820;color:var(--green)">만 원</span></div>
-        </div>
-        <div data-r="cmpD" style="margin-top:26px;font-size:24px;font-weight:620;color:var(--ink-3);line-height:1.5">※ 상한액 기준이에요. 통상임금이 더 적으면<br>통상임금만큼 받아요.</div>
       </div>`);
-    const monthAt = (i) => (i < 2 ? M1 + 0.9 + i * 0.3 : M2 + 0.25 + (i - 2) * 0.5);
-    for (let i = 0; i < 6; i++) c.sfx(monthAt(i), i === 5 ? 'ding' : 'pop', i === 5 ? 0.55 : 0.4);
-    c.sfx(M3 + 0.9, 'coin', 0.6);
-    c.sfx(N1 + 0.2, 'whoosh', 0.3);
-    c.sfx(N2 + 0.9, 'ding', 0.55);
+    colAt.forEach((t0, i) => c.sfx(t0 + 0.35, i === 5 ? 'ding' : 'pop', i === 5 ? 0.55 : 0.4));
+    c.sfx(N1 + 0.6, 'coin', 0.6);
+    c.sfx(N2 + 0.6, 'coin', 0.6);
     return (t) => {
       hd(t);
-      enter(r.card, t, c.in, { dy: 40 });
-      const shift = P(t, N1 - 0.1, 0.6, ease.inOutCubic) * (bw / 2 + 6);
-      for (let i = 0; i < 6; i++) {
-        const tg = monthAt(i);
-        const h = gold[i] * scale * P(t, tg, 0.7, ease.outBackSoft);
-        Object.assign(r[`gd${i}`].style, { height: `${h}px`, top: `${base - h}px` });
-        tf(r[`gd${i}`], { x: shift });
-        enter(r[`vl${i}`], t, tg + 0.35, { x: shift, dy: 16 });
-        const tgy = N1 + 0.3 + i * 0.18;
-        const hg = gray[i] * scale * P(t, tgy, 0.6, ease.outCubic);
-        Object.assign(r[`gy${i}`].style, { height: `${hg}px`, top: `${base - hg}px` });
-        tf(r[`gy${i}`], { x: -shift, o: t >= tgy ? 1 : 0 });
-        enter(r[`gl${i}`], t, tgy + 0.3, { x: -shift, dy: 12 });
-        const diff = gold[i] - gray[i];
-        const td = N2 + 0.1 + Math.max(0, i - 2) * 0.25;
-        const hd2 = diff * scale * P(t, td, 0.5, ease.outCubic);
-        Object.assign(r[`df${i}`].style, { height: `${hd2}px`, top: `${base - gray[i] * scale - hd2}px` });
-        tf(r[`df${i}`], { x: shift, o: diff > 0 && t >= td ? 1 : 0 });
-        if (diff > 0) enter(r[`dl${i}`], t, td + 0.3, { x: shift, dy: 12 });
-        else opacity(r[`dl${i}`], 0);
-      }
-      enter(r.legend, t, N1, { dy: 12 });
-      enter(r.side, t, c.in + 0.3, { dx: 40, dy: 0, out: N1 - 0.3 });
-      enter(r.s1, t, M3 - 0.1, { dy: 20 });
-      countTo(r.tot1, t, M3 + 0.1, 1.2, 0, 2000);
-      enter(r.s2, t, M3 + 1.3, { dy: 20 });
-      countTo(r.tot2, t, M3 + 1.5, 1.2, 0, 4000);
-      enter(r.side2, t, N1 + 0.1, { dx: 40, dy: 0 });
-      enter(r.cmpA, t, N1 + 0.4, { dx: 20, dy: 0 });
-      enter(r.cmpB, t, N1 + 0.8, { dx: 20, dy: 0 });
-      enter(r.cmpC, t, N2 - 0.1, { dy: 20 });
-      countTo(r.diff, t, N2 + 0.1, 0.9, 0, 650, (v) => `+${Math.round(v)}`);
-      enter(r.cmpD, t, N2 + 1.2, { dy: 16 });
+      enter(r.legend, t, M1 + 0.4, { dx: -20, dy: 0 });
+      cols.forEach((col, i) => {
+        col.forEach((el, k) => drop(el, t, colAt[i] + k * 0.045, { h: 160 }));
+        enter(r[`v${i}`], t, colAt[i] + 0.35, { dy: 14 });
+        countTo(r[`vn${i}`], t, colAt[i] + 0.35, 0.3 + V[i] / 1000, 0, V[i]);
+      });
+      enter(r.side, t, N1 - 0.2, { dx: 40, dy: 0 });
+      countTo(r.tot1, t, N1 + 0.1, 1.2, 0, 2000);
+      enter(r.s2, t, N2 - 0.1, { dy: 20 });
+      countTo(r.tot2, t, N2 + 0.1, 1.2, 0, 4000);
     };
   },
 };
 
-// ------------------------------------------------------------------ 9. 적용 기간 · 차액 소급
-const rule = {
-  id: 'rule',
+// ------------------------------------------------------------------ 10. 예시: 통상임금 월 500만 원이라면
+const example = {
+  id: 'example',
   build(root, c) {
-    const Q1c = c.at('q1', 2), Q1d = c.at('q1', 3), Q2 = c.at('q2');
-    const hd = header(root, {
-      y: 124,
-      eyebrow: `${icon('lightbulb', { size: 28 })}꼭 알아둘 포인트`,
-      eyeAt: c.in,
-      lines: [
-        { html: '특례는 <span class="hl-gold">나중에 쉰 사람 기간만큼</span>', at: c.in + 0.1 },
-        { html: '먼저 쉰 사람은 <span class="hl-gold">차액을 소급</span>', at: Q2 },
-      ],
-    });
-    const BW = 90, BG = 10, BX = 530;
-    const bx = (i) => BX + i * (BW + BG);
-    const blocks = (who, n, y) => Array.from({ length: n }, (_, i) => `<div class="tile gray" data-r="${who}${i}" style="left:${bx(i)}px;top:${y}px;width:${BW}px;height:70px;border-radius:18px;font-size:26px">${i + 1}</div>`).join('');
+    const E2 = c.at('e1', 1), E3 = c.at('e1', 2), E4 = c.at('e1', 3);
+    const hd = header(root, { y: 140, lines: [{ html: '통상임금 <span class="hl-blue">월 500만 원</span>이라면?', at: c.in + 0.05 }] });
+    const K = 0.56, X0 = 330, GAP = 6;
+    const seg = (vals, y, cls, ref) => {
+      let x = X0, html = '';
+      vals.forEach((v, i) => {
+        const w = v * K;
+        html += `<div class="block ${cls}" data-r="${ref}${i}" style="left:${x}px;top:${y}px;width:${w}px;height:104px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:${cls === 'gold' ? '#7A4A00' : 'var(--ink-2)'}">${v}</div>`;
+        x += w + GAP;
+      });
+      return { html, end: x - GAP };
+    };
+    const g = seg([250, 250, 250, 200, 200, 200], 400, 'gray', 'g');
+    const s = seg([250, 250, 300, 350, 400, 450], 580, 'gold', 's');
     const r = mount(root, `
-      <div class="card" data-r="box" style="left:150px;top:300px;width:1020px;height:460px">
-        <div class="abs" style="left:40px;top:34px;font-size:26px;font-weight:700;color:var(--ink-3)">예시 · 엄마 6개월 먼저, 아빠 3개월 나중</div>
-      </div>
-      <div class="abs" data-r="avM" style="left:200px;top:410px">${avatar('mom', 92)}</div>
-      <div class="abs" data-r="avD" style="left:200px;top:570px">${avatar('dad', 92)}</div>
-      <div class="abs col" data-r="nmM" style="left:312px;top:418px"><div style="font-size:34px;font-weight:820">엄마</div><div style="font-size:24px;font-weight:650;color:var(--ink-3)">먼저 휴직 · 6개월</div></div>
-      <div class="abs col" data-r="nmD" style="left:312px;top:578px"><div style="font-size:34px;font-weight:820">아빠</div><div style="font-size:24px;font-weight:650;color:var(--ink-3)">나중 휴직 · 3개월</div></div>
-      ${blocks('m', 6, 420)}
-      ${blocks('d', 3, 580)}
-      <div class="abs" data-r="guide" style="left:${bx(3) - BG / 2 - 2}px;top:396px;width:4px;height:274px;background:repeating-linear-gradient(180deg,var(--gold-2) 0 10px,transparent 10px 18px)"></div>
-      <div class="abs chip gold" data-r="tagS" style="left:${bx(0)}px;top:512px;height:46px;font-size:23px;padding:0 16px">${icon('sparkles', { size: 24 })}특례 3개월</div>
-      <div class="abs chip" data-r="tagG" style="left:${bx(3) + 8}px;top:512px;height:46px;font-size:23px;padding:0 16px;background:#EEF0F3;color:var(--ink-2)">일반 급여</div>
-      <div class="card" data-r="st1" style="left:1210px;top:300px;width:560px;height:200px;padding:34px 36px">
-        <div class="row" style="gap:14px"><div class="center" style="width:48px;height:48px;border-radius:24px;background:var(--ink);color:#fff;font-size:24px;font-weight:880">1</div><div style="font-size:32px;font-weight:820">엄마 휴직 중</div></div>
-        <div style="margin-top:18px;font-size:28px;font-weight:640;color:var(--ink-2);line-height:1.45">일단 <b style="color:var(--ink)">일반 급여</b>로 매달 받아요</div>
-      </div>
-      <div class="card" data-r="st2" style="left:1210px;top:540px;width:560px;height:220px;padding:34px 36px">
-        <div class="row" style="gap:14px"><div class="center" style="width:48px;height:48px;border-radius:24px;background:var(--gold);color:#fff;font-size:24px;font-weight:880">2</div><div style="font-size:32px;font-weight:820">아빠가 급여 신청하면</div></div>
-        <div style="margin-top:18px;font-size:28px;font-weight:640;color:var(--ink-2);line-height:1.45">엄마에게 <b class="hl-gold">차액을 소급</b>해서<br>한꺼번에 지급돼요</div>
-      </div>
-      <div class="abs" data-r="coinFly" style="left:0;top:0">${coins(2, 64)}</div>`);
-    const tDad = Q1c + 0.3, tMom = Q1d + 0.3;
-    for (let i = 0; i < 3; i++) { c.sfx(tDad + i * 0.22, 'tick', 0.35); c.sfx(tMom + i * 0.22, 'tick', 0.35); }
-    c.sfx(Q2 + 1.9, 'coin', 0.7);
+      <div class="abs" data-r="sub" style="left:0;top:252px;width:1920px;text-align:center;font-size:32px;font-weight:650;color:var(--ink-3)">6개월 사용 · 한 사람 기준 · 단위 만 원</div>
+      <div class="abs" data-r="lg" style="left:150px;top:424px;font-size:46px;font-weight:800;color:var(--ink-2)">일반</div>
+      <div class="abs disp" data-r="ls" style="left:150px;top:596px;font-size:64px;color:var(--gold-2)">6+6</div>
+      ${g.html}${s.html}
+      <div class="abs row" data-r="tg" style="left:${g.end + 30}px;top:414px;align-items:baseline;gap:4px"><span class="disp num" data-r="tgn" style="font-size:72px;color:var(--ink-2)">0</span><span style="font-size:30px;font-weight:800;color:var(--ink-2)">만 원</span></div>
+      <div class="abs row" data-r="ts" style="left:${s.end + 30}px;top:594px;align-items:baseline;gap:4px"><span class="disp num" data-r="tsn" style="font-size:72px;color:var(--gold-2)">0</span><span style="font-size:30px;font-weight:800;color:var(--gold-2)">만 원</span></div>
+      <div class="abs" data-r="dl" style="left:${g.end}px;top:708px;width:${s.end - g.end}px;height:10px;border-radius:5px;background:var(--green);transform-origin:0 50%"></div>
+      <div class="abs chip" data-r="dp" style="left:${g.end - 10}px;top:738px;height:66px;font-size:34px;padding:0 28px;background:var(--green);color:#fff">1인 +650만 원</div>
+      <div class="abs disp" data-r="cp" style="left:${g.end + 300}px;top:744px;font-size:50px;color:var(--ink)">부부라면 <span style="color:var(--green)">+1,300만 원</span></div>`);
+    const ga = [...Array(6).keys()].map((i) => r[`g${i}`]), sa = [...Array(6).keys()].map((i) => r[`s${i}`]);
+    c.sfx(E2 + 1.3, 'pop', 0.5);
+    c.sfx(E3 + 1.3, 'coin', 0.6);
+    c.sfx(E4 + 0.4, 'ding', 0.55);
     return (t) => {
       hd(t);
-      enter(r.box, t, c.in, { dy: 40 });
-      enter(r.avM, t, c.in + 0.15, { dx: -20, dy: 0 });
-      enter(r.avD, t, c.in + 0.3, { dx: -20, dy: 0 });
-      enter(r.nmM, t, c.in + 0.2, { dx: -20, dy: 0 });
-      enter(r.nmD, t, c.in + 0.35, { dx: -20, dy: 0 });
-      for (let i = 0; i < 6; i++) {
-        let cls = 'coral';
-        if (i < 3 && t >= tMom + i * 0.22) cls = 'gold';
-        if (i >= 3 && t >= tMom + 0.8) cls = 'gray';
-        setCls(r[`m${i}`], cls);
-        enter(r[`m${i}`], t, c.in + 0.3 + i * 0.06, { dy: 20, s0: 0.6 });
-      }
-      for (let i = 0; i < 3; i++) {
-        setCls(r[`d${i}`], t >= tDad + i * 0.22 ? 'gold' : 'blue');
-        enter(r[`d${i}`], t, c.in + 0.5 + i * 0.06, { dy: 20, s0: 0.6 });
-      }
-      enter(r.guide, t, tDad + 0.5, { dy: 0, s0: 1 });
-      enter(r.tagS, t, tMom + 0.8, { dy: 10 });
-      enter(r.tagG, t, tMom + 1.0, { dy: 10 });
-      enter(r.st1, t, Q2, { dx: 40, dy: 0 });
-      enter(r.st2, t, Q2 + 0.9, { dx: 40, dy: 0 });
-      const fp = P(t, Q2 + 1.9, 0.9, ease.inOutCubic);
-      tf(r.coinFly, { x: lerp(1300, bx(1), fp), y: lerp(620, 400, fp) - Math.sin(fp * Math.PI) * 120, o: fp > 0 && fp < 1 ? 1 : 0 });
+      enter(r.sub, t, c.in + 0.4, { dy: 12 });
+      enter(r.lg, t, E2 - 0.1, { dx: -20, dy: 0 });
+      ga.forEach((el, i) => drop(el, t, E2 + 0.15 + i * 0.12, { h: 110 }));
+      enter(r.tg, t, E2 + 1.1, { dx: -16, dy: 0 });
+      countTo(r.tgn, t, E2 + 1.1, 0.9, 0, 1350);
+      enter(r.ls, t, E3 - 0.1, { dx: -20, dy: 0 });
+      sa.forEach((el, i) => drop(el, t, E3 + 0.15 + i * 0.12, { h: 110 }));
+      enter(r.ts, t, E3 + 1.1, { dx: -16, dy: 0 });
+      countTo(r.tsn, t, E3 + 1.1, 0.9, 0, 2000);
+      const dp = P(t, E4, 0.6, ease.inOutCubic);
+      tf(r.dl, { sx: Math.max(0.001, dp), o: dp > 0 ? 1 : 0 });
+      pop(r.dp, t, E4 + 0.4, {});
+      enter(r.cp, t, E4 + 1.4, { dx: -20, dy: 0 });
     };
   },
 };
 
-// ------------------------------------------------------------------ 10. 한눈에 정리
+// ------------------------------------------------------------------ 11. 헷갈리는 포인트 3: 누구나 450만 원?
+const qa3 = {
+  id: 'qa3',
+  build(root, c) {
+    const Qa = c.at('a3q', 1), A = c.at('a3a'), A2 = c.at('a3a', 1), A3 = c.at('a3a', 2);
+    const head = qaHead(root, { n: 3, q: '그럼 누구나 월 450만 원 받나요?', tChip: c.in, tQ: Qa });
+    const V = [250, 250, 300, 350, 400, 450];
+    const base = 890, bw = 112, bh = 26, gap = 5, pitch = 142, x0 = 190;
+    const cols = stairs(root, { x0, base, bw, bh, gap, pitch, counts: V.map((v) => v / 50), ref: 'm' });
+    const lineY = base - 6 * (bh + gap) - 2;
+    const r = mount(root, `
+      <div class="abs disp" data-r="ans" style="left:150px;top:352px;font-size:86px;color:var(--red)">아니요, 450만 원은 ‘상한’</div>
+      <div class="abs" data-r="line" style="left:${x0 - 30}px;top:${lineY}px;width:${5 * pitch + bw + 60}px;height:0;border-top:5px dashed var(--blue);transform-origin:0 50%"></div>
+      <div class="abs chip blue" data-r="tag" style="left:${x0 + 5 * pitch + bw + 50}px;top:${lineY - 30}px;height:60px;font-size:30px;padding:0 24px;background:var(--blue);color:#fff">${icon('user', { size: 30 })}내 통상임금 월 300만 원</div>
+      <div class="abs" data-r="res" style="left:${x0 + 5 * pitch + bw + 50}px;top:${lineY + 56}px;font-size:40px;font-weight:800;letter-spacing:-0.03em;line-height:1.45;white-space:nowrap">셋째 달부터 계속 <span class="hl-blue">월 300만 원</span><br><span style="font-size:28px;font-weight:650;color:var(--ink-3)">(첫째·둘째 달은 250만 원)</span></div>`);
+    c.sfx(c.in + 0.1, 'pop', 0.45);
+    c.sfx(A + 0.1, 'click', 0.7);
+    c.sfx(A2 + 0.3, 'whoosh', 0.3);
+    c.sfx(A3 + 0.3, 'tick', 0.5);
+    return (t) => {
+      head(t);
+      pop(r.ans, t, A, { s0: 0.8, d: 0.5 });
+      cols.forEach((col, i) => col.forEach((el, k) => {
+        drop(el, t, A + 0.4 + i * 0.16 + k * 0.03, { h: 120 });
+        if (k >= 6) el.style.opacity = (+el.style.opacity * (1 - 0.82 * P(t, A3 + 0.3, 0.6))).toFixed(3);
+      }));
+      const lp = P(t, A2 + 0.2, 0.7, ease.inOutCubic);
+      tf(r.line, { sx: Math.max(0.001, lp), o: lp > 0 ? 1 : 0 });
+      pop(r.tag, t, A2 + 0.7, {});
+      enter(r.res, t, A3 + 0.6, { dy: 16 });
+    };
+  },
+};
+
+// ------------------------------------------------------------------ 12. 헷갈리는 포인트 4: 쓴 기간이 다르면? + 차액 소급
+const qa4 = {
+  id: 'qa4',
+  build(root, c) {
+    const Qa = c.at('a4q', 1), A = c.at('a4a'), A2 = c.at('a4a', 1), A3 = c.at('a4a', 2), A4 = c.at('a4a', 3);
+    const head = qaHead(root, { n: 4, q: '엄마 6개월, 아빠 3개월만 쓰면요?', tChip: c.in, tQ: Qa });
+    const S = 112, PIT = 130, X = 330, YM = 530, YD = 680;
+    let bl = '';
+    for (let i = 0; i < 6; i++) bl += `<div class="block coral" data-r="m${i}" style="left:${X + i * PIT}px;top:${YM}px;width:${S}px;height:${S}px;border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#fff">${i + 1}</div>`;
+    for (let i = 0; i < 3; i++) bl += `<div class="block blue" data-r="d${i}" style="left:${X + i * PIT}px;top:${YD}px;width:${S}px;height:${S}px;border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#fff">${i + 1}</div>`;
+    const r = mount(root, `${bl}
+      <div class="abs disp" data-r="ans" style="left:150px;top:346px;font-size:78px;color:var(--mint-2)">나중에 쉰 사람 기간만큼만 특례</div>
+      <div class="abs" data-r="lm" style="left:150px;top:${YM + 34}px;font-size:38px;font-weight:800">엄마</div>
+      <div class="abs" data-r="ld" style="left:150px;top:${YD + 34}px;font-size:38px;font-weight:800">아빠</div>
+      <div class="abs" data-r="ring" style="left:${X - 16}px;top:${YM - 16}px;width:${3 * PIT - (PIT - S) + 32}px;height:${YD - YM + S + 32}px;border:7px solid var(--gold);border-radius:34px"></div>
+      <div class="abs chip gold" data-r="tagS" style="left:${X - 16}px;top:${YD + S + 34}px;height:54px;font-size:27px;padding:0 20px;background:var(--gold);color:#fff">${icon('sparkles', { size: 28 })}3개월 · 6+6 상한</div>
+      <div class="abs chip" data-r="tagG" style="left:${X + 3 * PIT + 20}px;top:${YD + 30}px;height:54px;font-size:27px;padding:0 20px;background:#EEF0F3;color:var(--ink-2)">엄마 4~6개월은 일반 급여</div>
+      <div class="card" data-r="doc" style="left:1250px;top:480px;width:520px;height:270px;padding:38px 42px">
+        <div class="row" style="gap:12px;font-size:32px;font-weight:800">${icon('file-text', { size: 36 })}아빠 육아휴직급여 신청</div>
+        <div class="row" style="gap:12px;margin-top:24px;font-size:28px;font-weight:700;color:var(--ink-2)"><span style="width:34px;height:34px;display:inline-block">${OK_BADGE}</span>아빠 첫 3개월 특례</div>
+        <div class="row" data-r="docL2" style="gap:12px;margin-top:14px;font-size:28px;font-weight:700;color:var(--ink-2)"><span style="width:34px;height:34px;display:inline-block">${OK_BADGE}</span>엄마 3개월분 차액 소급</div>
+      </div>
+      <div class="abs" data-r="coinFly" style="left:0;top:0">${coins(2, 70)}</div>
+      <div class="abs chip gold" data-r="retro" style="left:${X + 3 * PIT + 20}px;top:${YM - 66}px;height:54px;font-size:27px;padding:0 20px;box-shadow:var(--shadow-sm)">${icon('coins', { size: 28 })}엄마 차액 소급 지급</div>`);
+    const mb = [...Array(6).keys()].map((i) => r[`m${i}`]), db = [...Array(3).keys()].map((i) => r[`d${i}`]);
+    c.sfx(c.in + 0.1, 'pop', 0.45);
+    c.sfx(A + 0.1, 'click', 0.7);
+    for (let i = 0; i < 3; i++) c.sfx(A + 0.7 + i * 0.2, 'tick', 0.4);
+    c.sfx(A2 + 0.3, 'pop', 0.5);
+    c.sfx(A3 + 0.4, 'whoosh', 0.3);
+    c.sfx(A4 + 0.3, 'coin', 0.7);
+    return (t) => {
+      head(t);
+      enter(r.lm, t, Qa + 0.6, { dx: -16, dy: 0 });
+      enter(r.ld, t, Qa + 0.8, { dx: -16, dy: 0 });
+      mb.forEach((el, i) => {
+        let cls = 'coral';
+        if (i < 3 && t >= A2 + 0.3 + i * 0.12) cls = 'gold';
+        if (i >= 3 && t >= A2 + 1.0) cls = 'gray';
+        setCls(el, cls, 'block');
+        drop(el, t, Qa + 0.7 + i * 0.07, { h: 120 });
+      });
+      db.forEach((el, i) => {
+        setCls(el, t >= A + 0.7 + i * 0.2 ? 'gold' : 'blue', 'block');
+        drop(el, t, Qa + 1.2 + i * 0.1, { h: 120 });
+      });
+      pop(r.ans, t, A, { s0: 0.8, d: 0.5 });
+      pop(r.ring, t, A2 + 0.3, { s0: 0.9 });
+      pop(r.tagS, t, A2 + 0.6, {});
+      enter(r.tagG, t, A2 + 1.1, { dx: -20, dy: 0 });
+      enter(r.doc, t, A3 + 0.1, { dx: 40, dy: 0 });
+      enter(r.docL2, t, A3 + 1.2, { dx: 20, dy: 0 });
+      const fp = P(t, A4 + 0.1, 0.9, ease.inOutCubic);
+      tf(r.coinFly, { x: lerp(1300, X + PIT, fp), y: lerp(640, YM - 40, fp) - Math.sin(fp * Math.PI) * 140, o: fp > 0 && fp < 1 ? 1 : 0 });
+      pop(r.retro, t, A4 + 0.9, {});
+    };
+  },
+};
+
+// ------------------------------------------------------------------ 13. 열쇠는 하나
+const key = {
+  id: 'key',
+  build(root, c) {
+    const Y1 = c.at('y1'), Y2 = c.at('y1', 1);
+    const r = mount(root, `
+      <div class="abs center" data-r="kb" style="left:890px;top:200px;width:140px;height:140px;border-radius:42px;background:var(--gold-soft);color:var(--gold-2);box-shadow:var(--shadow-sm)">${icon('key-round', { size: 84, stroke: 2.2 })}</div>
+      <div class="abs disp" data-r="k1" style="left:0;top:390px;width:1920px;text-align:center;font-size:88px">두 제도의 열쇠는 <span class="hl-gold">하나</span></div>
+      <div class="abs disp" data-r="k2" style="left:0;top:520px;width:1920px;text-align:center;font-size:132px;color:var(--coral-2)">부모가 둘 다 쓴다</div>
+      <div class="abs" data-r="av1" style="left:800px;top:720px">${avatar('mom', 130)}</div>
+      <div class="abs" data-r="av2" style="left:990px;top:720px">${avatar('dad', 130)}</div>
+      <div class="abs" data-r="hrt" style="left:930px;top:690px;width:60px;height:60px"><svg viewBox="0 0 24 24" width="100%" height="100%"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 5.3 3.1 1.7-1.9 3.2-3.1 5.3-3.1 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z" fill="#FF7D66"/></svg></div>`);
+    c.sfx(Y1 - 0.2, 'pop', 0.6);
+    c.sfx(Y2 + 0.1, 'ding', 0.6);
+    return (t) => {
+      pop(r.kb, t, c.in, { r: wave(t, 2.6, 4) });
+      enter(r.k1, t, Y1, { dy: 30 });
+      pop(r.k2, t, Y2, { s0: 0.7, d: 0.55 });
+      drop(r.av1, t, Y2 + 0.4, { h: 140 });
+      drop(r.av2, t, Y2 + 0.55, { h: 140 });
+      pop(r.hrt, t, Y2 + 1.0, { y: wave(t, 1.4, 6) });
+    };
+  },
+};
+
+// ------------------------------------------------------------------ 14. 3줄 요약
 const summary = {
   id: 'summary',
   build(root, c) {
-    const U1 = c.at('u1');
     const items = [
-      { color: 'mint', ic: 'calendar-plus', title: '기간 <span class="hl-mint">최대 1년 6개월</span>', sub: '엄마·아빠 각각 3개월 이상 사용 (한부모·중증 장애아동 부모 포함) · 부부 최대 3년', at: c.at('u2') },
-      { color: 'gold', ic: 'coins', title: '6+6: 첫 6개월 <span class="hl-gold">통상임금 100%</span>', sub: '생후 18개월 전 부모 모두 휴직 시작 · 월 250~450만 원 상한 · 1인 최대 2,000만 원', at: c.at('u3') },
-      { color: 'blue', ic: 'laptop', title: '급여 신청은 <span class="hl-blue">고용24</span>', sub: '휴직이 끝난 뒤 12개월 안에 신청해야 받을 수 있어요', at: c.at('u4') },
+      { color: 'mint', ic: 'calendar-plus', title: '기간 <span class="hl-mint">최대 1년 6개월</span>', sub: '엄마·아빠 각각 3개월 이상 (한부모·중증 장애아동 부모 포함) · 부부 최대 3년', at: c.at('u2') },
+      { color: 'gold', ic: 'coins', title: '6+6: 첫 6개월 <span class="hl-gold">최대 월 450만 원</span>', sub: '생후 18개월 전 부모 모두 휴직 시작 · 통상임금 100% · 1인 최대 2,000만 원', at: c.at('u3') },
+      { color: 'blue', ic: 'laptop', title: '휴직은 <span class="hl-blue">30일 전</span> 회사에 · 급여는 <span class="hl-blue">고용24</span>', sub: '급여는 휴직이 끝난 뒤 12개월 안에 신청해야 받을 수 있어요', at: c.at('u4') },
     ];
-    const hd = header(root, {
-      y: 120,
-      eyebrow: `${icon('notebook-pen', { size: 28 })}오늘의 핵심`,
-      eyeAt: U1 - 0.3,
-      lines: [{ html: '<span class="hl-blue">한눈에</span> 정리', at: U1 - 0.2 }],
-    });
+    const hd = header(root, { y: 130, lines: [{ html: '<span class="hl-blue">3줄</span> 요약', at: c.in }] });
     const Y = [290, 490, 690];
     const col2 = (k) => (k.color === 'gold' ? 'gold-2' : k.color === 'blue' ? 'blue-2' : 'mint-2');
     const r = mount(root, items.map((k, i) => `
       <div class="card" data-r="it${i}" style="left:200px;top:${Y[i]}px;width:1520px;height:172px">
         <div class="abs center" style="left:34px;top:40px;width:92px;height:92px;border-radius:28px;background:var(--${k.color}-soft);color:var(--${col2(k)})">${icon(k.ic, { size: 50 })}</div>
-        <div class="abs" style="left:156px;top:34px;font-size:44px;font-weight:840;letter-spacing:-0.035em;white-space:nowrap">${k.title}</div>
-        <div class="abs" style="left:156px;top:104px;font-size:26px;font-weight:620;color:var(--ink-2);white-space:nowrap">${k.sub}</div>
+        <div class="abs disp" style="left:156px;top:30px;font-size:52px">${k.title}</div>
+        <div class="abs" style="left:156px;top:106px;font-size:26px;font-weight:620;color:var(--ink-2);white-space:nowrap">${k.sub}</div>
         <svg class="abs" style="left:1400px;top:46px" width="80" height="80" viewBox="0 0 80 80">
           <circle cx="40" cy="40" r="36" fill="var(--${k.color}-soft)"/>
           <path data-r="ck${i}" d="M22 42 L35 55 L60 27" fill="none" stroke="var(--${col2(k)})" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -716,62 +779,68 @@ const summary = {
   },
 };
 
-// ------------------------------------------------------------------ 11. 아웃트로
+// ------------------------------------------------------------------ 15. 아웃트로: 상담 안내 + 다음 영상 예고
 const outro = {
   id: 'outro',
   noExit: true,
   build(root, c) {
-    const O1 = c.at('o1'), O2 = c.at('o1', 1);
+    const O1 = c.at('o1'), O2 = c.at('o2'), O2b = c.at('o2', 1);
     const END = c.end;
-    const hd = header(root, {
-      y: 140,
-      lines: [
-        { html: '내 상황은 <span class="hl-blue">여기서 확인!</span>', at: O1 - 0.2 },
-        { html: '도움이 되셨다면 <span class="hl-coral">구독 · 좋아요</span>', at: O2 },
-      ],
-    });
     const r = mount(root, `
+      <div class="abs disp" data-r="h1" style="left:0;top:150px;width:1920px;text-align:center;font-size:80px">헷갈릴 땐 <span class="hl-blue">여기서 확인!</span></div>
       <div class="card col center" data-r="cA" style="left:330px;top:330px;width:600px;height:400px">
         <div class="icon-badge" style="width:120px;height:120px;border-radius:36px;background:var(--blue-soft);color:var(--blue-2)">${icon('phone', { size: 64 })}</div>
         <div style="margin-top:26px;font-size:32px;font-weight:720;color:var(--ink-2)">고용노동부 고객상담센터</div>
-        <div class="num" style="margin-top:6px;font-size:100px;font-weight:890;letter-spacing:-0.02em;color:var(--blue-2)">1350</div>
+        <div class="disp num" style="margin-top:6px;font-size:110px;color:var(--blue-2)">1350</div>
       </div>
       <div class="card col center" data-r="cB" style="left:990px;top:330px;width:600px;height:400px">
         <div class="icon-badge" style="width:120px;height:120px;border-radius:36px;background:var(--mint-soft);color:var(--mint-2)">${icon('laptop', { size: 64 })}</div>
         <div style="margin-top:26px;font-size:32px;font-weight:720;color:var(--ink-2)">급여 신청 · 모의계산</div>
-        <div style="margin-top:6px;font-size:92px;font-weight:890;letter-spacing:-0.03em;color:var(--mint-2)">고용24</div>
+        <div class="disp" style="margin-top:6px;font-size:100px;color:var(--mint-2)">고용24</div>
         <div style="font-size:26px;font-weight:650;color:var(--ink-3)">www.work24.go.kr</div>
       </div>
-      <div class="abs" data-r="fam" style="left:620px;top:290px">${family(680)}</div>
-      <div class="abs row" data-r="btns" style="left:0;top:700px;width:1920px;justify-content:center;gap:28px">
-        <div class="row" data-r="sub" style="gap:14px;height:88px;padding:0 40px;border-radius:44px;background:#F0525A;color:#fff;font-size:38px;font-weight:840;box-shadow:0 16px 36px rgba(240,82,90,0.3)">${icon('bell', { size: 40, stroke: 2.4 })}<span data-r="subTxt">구독</span></div>
-        <div class="row" style="gap:14px;height:88px;padding:0 40px;border-radius:44px;background:#fff;color:var(--ink);font-size:38px;font-weight:840;box-shadow:var(--shadow)">${icon('thumbs-up', { size: 40, stroke: 2.4 })}좋아요</div>
+      <div class="abs chip gold" data-r="nx" style="left:150px;top:210px;height:62px;font-size:32px;padding:0 26px;background:var(--gold);color:#fff">${icon('bell', { size: 32 })}다음 영상</div>
+      <div class="abs disp" data-r="nt" style="left:150px;top:300px;font-size:116px">1주·2주 <span class="hl-gold">단기 육아휴직</span></div>
+      <div class="abs" data-r="ns" style="left:154px;top:450px;font-size:36px;font-weight:700;color:var(--ink-2)">2026년 8월 20일부터 시행 · 연 1회, 나눠 쓰는 횟수에 포함 안 돼요</div>
+      <div class="block gold" data-r="w1" style="left:1440px;top:250px;width:150px;height:150px;border-radius:32px;display:flex;align-items:center;justify-content:center"><span class="disp" style="font-size:50px;color:#7A4A00">1주</span></div>
+      <div class="block blue" data-r="w2" style="left:1610px;top:250px;width:150px;height:150px;border-radius:32px;display:flex;align-items:center;justify-content:center"><span class="disp" style="font-size:50px;color:#fff">2주</span></div>
+      <div class="abs" data-r="fam" style="left:150px;top:560px">${family(420)}</div>
+      <div class="abs row" data-r="btns" style="left:700px;top:660px;gap:28px">
+        <div class="row" data-r="sub" style="gap:14px;height:92px;padding:0 42px;border-radius:46px;background:#F0525A;color:#fff;font-size:40px;font-weight:840;box-shadow:0 16px 36px rgba(240,82,90,0.3)">${icon('bell', { size: 42, stroke: 2.4 })}<span data-r="subTxt">구독</span></div>
+        <div class="row" style="gap:14px;height:92px;padding:0 42px;border-radius:46px;background:#fff;color:var(--ink);font-size:40px;font-weight:840;box-shadow:var(--shadow)">${icon('thumbs-up', { size: 42, stroke: 2.4 })}좋아요</div>
       </div>
       <div class="abs col center" data-r="disc" style="left:0;top:862px;width:1920px;font-size:24px;font-weight:600;color:var(--ink-3);line-height:1.6">
         <div>본 영상은 2026년 9월 기준 정보입니다. 개인별 적용 여부는 고용노동부(☎1350)·고용24에서 확인하세요.</div>
         <div>참고: 남녀고용평등과 일·가정 양립 지원에 관한 법률 · 고용보험법 시행령 · 고용노동부 안내</div>
       </div>`);
-    const tClick = O2 + 0.9;
+    const out1 = O2 - 0.3;
+    const tClick = O2b + 0.9;
     c.sfx(O1 + 0.2, 'pop', 0.5);
     c.sfx(O1 + 0.5, 'pop', 0.5);
+    c.sfx(O2 + 0.2, 'ding', 0.5);
+    c.sfx(O2 + 0.9, 'pop', 0.45);
     c.sfx(tClick, 'click', 0.8);
     c.sfx(tClick + 0.6, 'sparkle', 0.45);
     return (t) => {
-      hd(t);
-      const out = O2 - 0.3;
-      enter(r.cA, t, O1 + 0.1, { dy: 40, out });
-      enter(r.cB, t, O1 + 0.4, { dy: 40, out });
-      enter(r.fam, t, O2 + 0.1, { dy: 50, s0: 0.85, y: wave(t, 3, 6) });
+      enter(r.h1, t, O1 - 0.2, { dy: 24, out: out1 });
+      enter(r.cA, t, O1 + 0.1, { dy: 40, out: out1 });
+      enter(r.cB, t, O1 + 0.4, { dy: 40, out: out1 });
+      pop(r.nx, t, O2, {});
+      enter(r.nt, t, O2 + 0.25, { dy: 30 });
+      enter(r.ns, t, O2 + 0.7, { dy: 16 });
+      drop(r.w1, t, O2 + 0.8, { h: 170 });
+      drop(r.w2, t, O2 + 1.0, { h: 170 });
+      enter(r.fam, t, O2b, { dy: 40, s0: 0.9, y: wave(t, 3, 5) });
       blink(r.fam, t, 4);
-      enter(r.btns, t, O2 + 0.4, { dy: 30 });
+      enter(r.btns, t, O2b + 0.3, { dy: 30 });
       const pressed = t >= tClick;
       setHtml(r.subTxt, pressed ? '구독중' : '구독');
       r.sub.style.background = pressed ? '#8A94A3' : '#F0525A';
       tf(r.sub, { s: pressed ? 1 - 0.08 * Math.sin(Math.PI * clamp((t - tClick) / 0.25)) : 1 });
-      enter(r.disc, t, c.lend('o1') + 0.55, { dy: 10 });
+      enter(r.disc, t, c.lend('o2') + 0.5, { dy: 10 });
       opacity(root, 1 - P(t, END - 0.7, 0.7, ease.inOutSine));
     };
   },
 };
 
-export const scenes = [hook, title, basic, conditions, both, faq, concept66, chart, rule, summary, outro];
+export const scenes = [hook, title, basic, conditions, both, qa1, qa2, concept66, stairsScene, example, qa3, qa4, key, summary, outro];
