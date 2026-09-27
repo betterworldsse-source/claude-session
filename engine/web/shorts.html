@@ -15,10 +15,10 @@
     #chips { display: flex; gap: 14px; }
     #chips .chip { height: 60px; font-size: 30px; padding: 0 24px; }
     #title { margin-top: 34px; text-align: center; font-size: 90px; line-height: 1.18; white-space: nowrap; }
-    #win { position: absolute; left: 0; top: 700px; width: 1080px; height: 375px; overflow: hidden;
+    #win { position: absolute; left: 0; top: 700px; width: 1080px; height: 369px; overflow: hidden;
       box-shadow: 0 24px 60px rgba(31, 42, 55, 0.16); }
-    /* 1080 / 1700 = 0.6353 배율로 무대의 x 110~1810, y 320~910 구간을 보여 줌 */
-    #stage { inset: auto; left: 0; top: 0; width: 1920px; height: 1080px; transform: translate(-69.88px, -203.29px) scale(0.635294); transform-origin: 0 0; }
+    /* 1080 / 1728 = 0.625 배율로 무대의 x 96~1824, y 320~910 구간을 보여 줌 */
+    #stage { inset: auto; left: 0; top: 0; width: 1920px; height: 1080px; transform: translate(-60px, -200px) scale(0.625); transform-origin: 0 0; }
     #stage #caption, #stage #chip-part, #stage #progress, #stage #stamp { display: none !important; }
     #asof { position: absolute; left: 0; top: 1092px; width: 1040px; text-align: right; font-size: 24px; font-weight: 700; color: var(--ink-3); }
     #bigcap { position: absolute; left: 90px; width: 900px; top: 1160px; display: flex; justify-content: center; }
@@ -26,6 +26,10 @@
       font-size: 54px; font-weight: 720; line-height: 1.32; letter-spacing: -0.03em; text-align: center; white-space: normal;
       box-shadow: 0 14px 34px rgba(20, 25, 35, 0.2); }
     #cap b { color: #FFD36E; font-weight: 800; }
+    #cta { position: absolute; left: 0; top: 1380px; width: 1080px; display: flex; justify-content: center; }
+    #cta div { height: 64px; padding: 0 30px; border-radius: 32px; background: rgba(255, 255, 255, 0.85); box-shadow: var(--shadow-sm);
+      display: flex; align-items: center; gap: 12px; font-size: 29px; font-weight: 720; color: var(--ink-2); white-space: nowrap; }
+    #cta b { color: var(--coral-2); font-weight: 820; }
   </style>
 </head>
 <body>
@@ -34,6 +38,7 @@
     <div id="win"><div id="stage"></div></div>
     <div id="asof"></div>
     <div id="bigcap"><div id="cap"></div></div>
+    <div id="cta"><div><b>전체 영상 ▶</b> 육아휴직 6개월 연장 & 6+6 한 번에 정리</div></div>
   </div>
   <script type="module">
     import { start, buildCaptions, highlight, icon, P, lerp, ease, tf } from './engine.js';
@@ -52,7 +57,7 @@
     document.getElementById('asof').textContent = `${mod.asOf} · 고용노동부 자료`;
     await start({ timeline, scenes: mod.scenes, chapters: mod.chapters, asOf: mod.asOf });
     const A = timeline.lines.find((l) => l.id === sh.answerLine).start;
-    const top = document.getElementById('top'), win = document.getElementById('win'), asof = document.getElementById('asof');
+    const top = document.getElementById('top'), win = document.getElementById('win'), asof = document.getElementById('asof'), cta = document.getElementById('cta');
     const caps = buildCaptions(timeline);
     const capEl = document.getElementById('cap');
     const base = window.renderFrame;
@@ -64,6 +69,7 @@
       tf(top, { y: lerp(620, 250, p), s: lerp(1.12, 1, p) });
       tf(win, { y: lerp(70, 0, p), o: p });
       tf(asof, { o: p });
+      tf(cta, { o: p });
       const c = caps.find((x) => t >= x.start && t < x.show) || null;
       if (c !== last) {
         capEl.innerHTML = c ? highlight(c.text) : '';
