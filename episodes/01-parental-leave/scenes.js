@@ -239,8 +239,8 @@ const basic = {
       enter(box, t, c.in, { dy: 40 });
       enter(rows.av1, t, c.in + 0.2, { dx: -24, dy: 0 });
       enter(rows.av2, t, c.in + 0.3, { dx: -24, dy: 0 });
-      rows.a.forEach((el, i) => drop(el, t, i < 12 ? tMom + i * 0.045 : tPlus + (i - 12) * 0.07, { h: 130 }));
-      rows.b.forEach((el, i) => drop(el, t, i < 12 ? tDad + i * 0.045 : tPlus + 0.25 + (i - 12) * 0.07, { h: 130 }));
+      rows.a.forEach((el, i) => drop(el, t, i < 12 ? tMom + i * 0.045 : tPlus + (i - 12) * 0.07, { h: 80 }));
+      rows.b.forEach((el, i) => drop(el, t, i < 12 ? tDad + i * 0.045 : tPlus + 0.25 + (i - 12) * 0.07, { h: 44 }));
       const plus = t >= tPlus + 0.6;
       setHtml(rows.lb1, plus ? '<span class="hl-gold">1년 6개월</span>' : '<span class="hl-coral">엄마 1년</span>');
       setHtml(rows.lb2, plus ? '<span class="hl-gold">1년 6개월</span>' : '<span class="hl-blue">아빠 1년</span>');
@@ -396,7 +396,7 @@ const qa1 = {
       head(t);
       pop(r.ans, t, A, { s0: 0.8, d: 0.5 });
       for (let i = 0; i < 3; i++) {
-        drop(r[`w${i}`], t, A + 0.3 + i * 0.15, { h: 120 });
+        drop(r[`w${i}`], t, A + 0.3 + i * 0.15, { h: 50 });
         pop(r[`x${i}`], t, A2 + 0.2 + i * 0.14, {});
       }
       enter(r.note, t, A2 + 1.0, { dx: 40, dy: 0 });
@@ -613,11 +613,11 @@ const example = {
       hd(t);
       enter(r.sub, t, c.in + 0.4, { dy: 12 });
       enter(r.lg, t, E2 - 0.1, { dx: -20, dy: 0 });
-      ga.forEach((el, i) => drop(el, t, E2 + 0.15 + i * 0.12, { h: 110 }));
+      ga.forEach((el, i) => drop(el, t, E2 + 0.15 + i * 0.12, { h: 90 }));
       enter(r.tg, t, E2 + 1.1, { dx: -16, dy: 0 });
       countTo(r.tgn, t, E2 + 1.1, 0.9, 0, 1350);
       enter(r.ls, t, E3 - 0.1, { dx: -20, dy: 0 });
-      sa.forEach((el, i) => drop(el, t, E3 + 0.15 + i * 0.12, { h: 110 }));
+      sa.forEach((el, i) => drop(el, t, E3 + 0.15 + i * 0.12, { h: 60 }));
       enter(r.ts, t, E3 + 1.1, { dx: -16, dy: 0 });
       countTo(r.tsn, t, E3 + 1.1, 0.9, 0, 2000);
       const dp = P(t, E4, 0.6, ease.inOutCubic);
@@ -702,11 +702,11 @@ const qa4 = {
         if (i < 3 && t >= A2 + 0.3 + i * 0.12) cls = 'gold';
         if (i >= 3 && t >= A2 + 1.0) cls = 'gray';
         setCls(el, cls, 'block');
-        drop(el, t, Qa + 0.7 + i * 0.07, { h: 120 });
+        drop(el, t, Qa + 0.7 + i * 0.07, { h: 80 });
       });
       db.forEach((el, i) => {
         setCls(el, t >= A + 0.7 + i * 0.2 ? 'gold' : 'blue', 'block');
-        drop(el, t, Qa + 1.2 + i * 0.1, { h: 120 });
+        drop(el, t, Qa + 1.2 + i * 0.1, { h: 34 });
       });
       pop(r.ans, t, A, { s0: 0.8, d: 0.5 });
       pop(r.ring, t, A2 + 0.3, { s0: 0.9 });
@@ -739,8 +739,8 @@ const key = {
       pop(r.kb, t, c.in, { r: wave(t, 2.6, 4) });
       enter(r.k1, t, Y1, { dy: 30 });
       pop(r.k2, t, Y2, { s0: 0.7, d: 0.55 });
-      drop(r.av1, t, Y2 + 0.4, { h: 140 });
-      drop(r.av2, t, Y2 + 0.55, { h: 140 });
+      drop(r.av1, t, Y2 + 0.4, { h: 44 });
+      drop(r.av2, t, Y2 + 0.55, { h: 44 });
       pop(r.hrt, t, Y2 + 1.0, { y: wave(t, 1.4, 6) });
     };
   },
