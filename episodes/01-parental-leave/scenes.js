@@ -1,17 +1,26 @@
-// 1화: 육아휴직 1년 6개월 & 6+6 부모육아휴직제 (약 3분 버전) — 장면 정의
+// 1화: 육아휴직 6개월 연장 제도 & 6+6 부모육아휴직제 — 장면 정의
+// 흐름: 오늘 소개할 제도 두 가지 → ① 6개월 연장 제도(성립 조건) → ② 6+6(어떤 제도인지) → ③ 헷갈리는 포인트 → 정리
 // 각 장면은 build(root, ctx)에서 DOM을 만들고, 시간 t를 받는 update 함수를 돌려줍니다.
 // ctx.at('문장id', k) = 해당 문장의 k번째 자막 청크가 시작되는 시각(초)
 // 모든 타이밍이 문장/자막 기준이라, 내 목소리로 녹음을 바꿔도 그래픽이 자동으로 따라갑니다.
 // 시각 언어: "블록 1개 = 1개월", "블록 1개 = 50만 원" — 블록이 떨어져 쌓이며 설명합니다.
 import { ease, P, clamp, lerp, wave, mount, tf, opacity, enter, pop, drop, rise, countTo, prepDraw, draw, icon } from '../../engine/web/engine.js';
-import { mom, dad, avatar, family, blink, coins } from '../../engine/web/art.js';
+import { avatar, family, blink, coins } from '../../engine/web/art.js';
 
 export const asOf = '2026년 9월 기준';
 
+// label·sub: 왼쪽 위 파트 칩 / cardChip·title·cardSub: 챕터 전환 카드
 export const chapters = {
-  1: { label: '① 기간', title: '기간', sub: '육아휴직 1년 6개월', short: '기간', color: 'mint', icon: 'calendar-plus', card: ['#2DBFA4', '#138C78'] },
-  2: { label: '② 급여', title: '급여', sub: '6+6 부모육아휴직제', short: '급여', color: 'gold', icon: 'coins', card: ['#F9A12B', '#E0700A'] },
-  3: { label: '정리', title: '정리', sub: '열쇠는 하나', short: '정리', color: 'blue', icon: 'list-checks', card: null },
+  1: { label: '1', sub: '육아휴직 6개월 연장 제도', cardChip: '첫 번째 제도', title: '6개월 연장 제도', cardSub: '육아휴직이 1년 6개월이 되는 조건', short: '연장', color: 'mint', icon: 'calendar-plus', card: ['#2DBFA4', '#138C78'] },
+  2: { label: '2', sub: '6+6 부모육아휴직제', cardChip: '두 번째 제도', title: '6+6 부모육아휴직제', cardSub: '첫 6개월 급여를 통상임금 100%로', short: '6+6', color: 'gold', icon: 'coins', card: ['#F9A12B', '#E0700A'] },
+  3: { label: '3', sub: '헷갈리는 포인트 4가지', cardChip: '꼭 짚고 갈 것', title: '헷갈리는 포인트', cardSub: '자주 묻는 질문 4가지', short: '포인트', color: 'coral', icon: 'circle-help', card: ['#FF8C74', '#E4553E'] },
+  4: { label: '정리', sub: '3줄 요약', title: '정리', short: '정리', color: 'blue', icon: 'list-checks', card: null },
+};
+
+// 헷갈리는 포인트가 어느 제도에 관한 것인지 표시하는 태그
+const SYS = {
+  ext: { label: '6개월 연장 제도', color: 'mint', icon: 'calendar-plus' },
+  six: { label: '6+6 부모육아휴직제', color: 'gold', icon: 'coins' },
 };
 
 // ------------------------------------------------------------------ 공용 조각
@@ -31,10 +40,14 @@ function header(root, { y = 128, size = 76, lines }) {
   };
 }
 
-/** "헷갈리는 포인트 N" + Q 질문 줄 */
-function qaHead(root, { n, q, tChip, tQ, qSize = 50 }) {
+/** "헷갈리는 포인트 N" + 해당 제도 태그 + Q 질문 줄 */
+function qaHead(root, { n, sys, q, tChip, tQ, qSize = 50 }) {
+  const s = SYS[sys];
   const r = mount(root, `
-    <div class="abs chip" data-r="qaChip" style="left:150px;top:150px;height:54px;font-size:27px;padding:0 22px;border:3px solid var(--red);color:var(--red);background:rgba(255,255,255,0.75)">${icon('circle-help', { size: 28, stroke: 2.4 })}헷갈리는 포인트 ${n}</div>
+    <div class="abs row" data-r="qaChip" style="left:150px;top:150px;gap:14px">
+      <div class="chip" style="height:54px;font-size:27px;padding:0 22px;border:3px solid var(--red);color:var(--red);background:rgba(255,255,255,0.75)">${icon('circle-help', { size: 28, stroke: 2.4 })}헷갈리는 포인트 ${n}</div>
+      <div class="chip ${s.color}" style="height:54px;font-size:27px;padding:0 22px">${icon(s.icon, { size: 28 })}${s.label}</div>
+    </div>
     <div class="abs row" data-r="qaQ" style="left:150px;top:230px;gap:26px"><div class="qbadge">Q</div><div style="font-size:${qSize}px;font-weight:780;letter-spacing:-0.03em;white-space:nowrap">${q}</div></div>`);
   return (t) => {
     enter(r.qaChip, t, tChip, { dx: -24, dy: 0 });
@@ -87,110 +100,77 @@ function stairs(root, { x0, base, bw, bh, gap, pitch, counts, cls = 'gold', ref 
   return counts.map((n, i) => Array.from({ length: n }, (_, k) => r[`${ref}_${i}_${k}`]));
 }
 
-// ------------------------------------------------------------------ 1. 도입부: 오해 → 결론 → 문제 제기
-const hook = {
-  id: 'hook',
+// ------------------------------------------------------------------ 1. 도입부: 오늘 소개할 제도 두 가지
+const intro = {
+  id: 'intro',
   build(root, c) {
-    const H1 = c.at('h1'), H2 = c.at('h2'), H2b = c.at('h2', 1), H2c = c.at('h2', 2), H3 = c.at('h3'), H3b = c.at('h3', 1);
-    const tNo = H1 + 1.45;
+    const I2 = c.at('i2'), I2b = c.at('i2', 1), I3 = c.at('i3'), I3b = c.at('i3', 1), I4 = c.at('i4');
     const hd = header(root, {
-      y: 140, size: 100,
+      y: 150, size: 92,
       lines: [
-        { html: '육아휴직 = <span class="hl-mint">1년</span>?', at: 0.12 },
-        { html: '<span class="hl-mint">1년</span>이 끝이 아니에요!', at: tNo },
-        { html: '엄마·아빠 <span class="hl-coral">둘 다</span> 쓰면', at: H2 },
-        { html: '문제는 이 <span class="hl-coral">‘조건’</span>!', at: H3 },
-        { html: '헷갈리는 포인트만 <span class="hl-coral">콕!</span>', at: H3b },
+        { html: '오늘 소개할 육아휴직 제도 <span class="hl-coral">2가지</span>', at: 0.12 },
+        { html: '헷갈리는 포인트까지 <span class="hl-coral">차례대로</span>', at: I4 },
       ],
     });
-    // 18개월 블록 줄
-    const S = 72, G = 12, X0 = Math.round((1920 - (18 * (S + G) - G)) / 2), Y0 = 540;
-    let bl = '';
-    for (let i = 0; i < 18; i++) bl += `<div class="tile ${i < 12 ? 'mint' : 'gold'}" data-r="b${i}" style="left:${X0 + i * (S + G)}px;top:${Y0}px;width:${S}px;height:${S}px;border-radius:18px"></div>`;
-    const B = mount(root, `${bl}
-      <div class="abs center" data-r="l12" style="left:${X0}px;top:${Y0 + 100}px;width:${12 * (S + G) - G}px;height:50px;font-size:34px;font-weight:760;color:var(--mint-2);border-top:4px solid var(--mint);padding-top:10px">기본 1년 = 12개월</div>
-      <div class="abs center" data-r="l6" style="left:${X0 + 12 * (S + G)}px;top:${Y0 + 100}px;width:${6 * (S + G) - G}px;height:50px;font-size:34px;font-weight:800;color:var(--gold-2);border-top:4px solid var(--gold);padding-top:10px">+6개월</div>`);
-    const rowOut = H2 - 0.35;
-    // 결론 카드 2장
-    const r = mount(root, `
-      <div class="abs" data-r="mom" style="left:470px;top:330px">${mom({ w: 380 })}</div>
-      <div class="abs" data-r="dad" style="left:1070px;top:330px">${dad({ w: 380 })}</div>
-      <div class="abs center" data-r="plus" style="left:900px;top:520px;width:120px;height:120px;border-radius:60px;background:#fff;box-shadow:var(--shadow);font-size:80px;font-weight:880;color:var(--coral)">+</div>
-      <div class="card" data-r="cA" style="left:170px;top:330px;width:770px;height:440px">
-        <div class="abs row" style="left:48px;top:44px;gap:16px">
-          <div class="icon-badge" style="width:78px;height:78px;border-radius:24px;background:var(--mint-soft);color:var(--mint-2)">${icon('calendar-plus', { size: 44 })}</div>
-          <div class="chip mint" style="height:62px;font-size:34px;padding:0 26px">① 휴직 기간</div>
-        </div>
-        <div class="abs row" style="left:0;top:176px;width:770px;justify-content:center;gap:24px;align-items:center">
-          <span class="disp" style="font-size:74px;color:var(--ink-3);text-decoration:line-through;text-decoration-thickness:6px">1년</span>
-          ${icon('arrow-right', { size: 64, stroke: 3, color: '#1FAF96' })}
-          <span class="disp" style="font-size:108px;color:var(--mint-2)">1년 6개월</span>
-        </div>
-        <div class="abs" style="left:0;top:328px;width:770px;text-align:center;font-size:32px;font-weight:650;color:var(--ink-2)">부모 각자 · 부부 합산 최대 3년</div>
-        <div class="abs chip ink" data-r="qA" style="right:36px;top:48px;height:56px;font-size:28px;padding:0 22px">${icon('key-round', { size: 28 })}조건은?</div>
+    const W = 770, H = 440, X = [170, 980], Y = 330;
+    const numDot = (n, color) => `<div class="center" style="width:64px;height:64px;border-radius:32px;background:var(--${color});color:#fff;font-size:36px;font-weight:880;flex:none">${n}</div>`;
+    const cap = (html) => `<div class="abs" style="left:0;top:366px;width:${W}px;text-align:center;font-size:30px;font-weight:680;color:var(--ink-2)">${html}</div>`;
+    // ① 기간: 1년 → 1년 6개월 + 18칸 블록 줄 (12칸 + 6칸)
+    const TS = 32, TG = 4, TX = Math.round((W - (18 * (TS + TG) - TG)) / 2);
+    let tiles = '';
+    for (let i = 0; i < 18; i++) tiles += `<div class="tile ${i < 12 ? 'mint' : 'gold'}" data-r="t${i}" style="left:${TX + i * (TS + TG)}px;top:300px;width:${TS}px;height:${TS}px;border-radius:9px"></div>`;
+    const back1 = `
+      <div class="abs row" style="left:44px;top:40px;gap:18px">${numDot(1, 'mint')}<div style="font-size:40px;font-weight:820;letter-spacing:-0.035em;white-space:nowrap">육아휴직 6개월 연장 제도</div></div>
+      <div class="abs row" style="left:0;top:132px;width:${W}px;justify-content:center;gap:24px;align-items:center">
+        <span class="disp" style="font-size:74px;color:var(--ink-3);text-decoration:line-through;text-decoration-thickness:6px">1년</span>
+        ${icon('arrow-right', { size: 64, stroke: 3, color: '#1FAF96' })}
+        <span class="disp" style="font-size:108px;color:var(--mint-2)">1년 6개월</span>
       </div>
-      <div class="card" data-r="cB" style="left:980px;top:330px;width:770px;height:440px">
-        <div class="abs row" style="left:48px;top:44px;gap:16px">
-          <div class="icon-badge" style="width:78px;height:78px;border-radius:24px;background:var(--gold-soft);color:var(--gold-2)">${icon('coins', { size: 44 })}</div>
-          <div class="chip gold" style="height:62px;font-size:34px;padding:0 26px">② 휴직 급여</div>
+      ${tiles}
+      ${cap('휴직 <b style="color:var(--mint-2)">기간</b>이 늘어나는 제도')}`;
+    // ② 급여: 첫 6개월 상한 + 미니 계단
+    const V = [250, 250, 300, 350, 400, 450], SW = 40, SG = 10, SX = Math.round((W - (6 * (SW + SG) - SG)) / 2);
+    let steps = '';
+    V.forEach((v, i) => { const h = Math.round((v / 450) * 46); steps += `<div class="block gold" data-r="st${i}" style="left:${SX + i * (SW + SG)}px;top:${334 - h}px;width:${SW}px;height:${h}px;border-radius:8px"></div>`; });
+    const back2 = `
+      <div class="abs row" style="left:44px;top:40px;gap:18px">${numDot(2, 'gold')}<div style="font-size:40px;font-weight:820;letter-spacing:-0.035em;white-space:nowrap">6+6 부모육아휴직제</div></div>
+      <div class="abs col" style="left:0;top:122px;width:${W}px;align-items:center">
+        <div style="font-size:32px;font-weight:720;color:var(--ink-2)">첫 6개월 급여 상한</div>
+        <div class="disp" style="font-size:94px;color:var(--gold-2);line-height:1.2">최대 월 450만 원</div>
+      </div>
+      ${steps}
+      ${cap('휴직 <b style="color:var(--gold-2)">급여</b>가 늘어나는 제도')}`;
+    const slot = (i, back) => `
+      <div class="abs" data-r="s${i}" style="left:${X[i]}px;top:${Y}px;width:${W}px;height:${H}px">
+        <div class="card col center" data-r="f${i}" style="left:0;top:0;width:${W}px;height:${H}px;background:rgba(255,255,255,0.55);border:4px dashed rgba(31,42,55,0.16);box-shadow:none">
+          <div class="disp" style="font-size:210px;line-height:1;color:rgba(31,42,55,0.12)">${i + 1}</div>
         </div>
-        <div class="abs col" style="left:0;top:156px;width:770px;align-items:center">
-          <div style="font-size:36px;font-weight:720;color:var(--ink-2)">첫 6개월 상한</div>
-          <div class="disp" style="font-size:94px;color:var(--gold-2);line-height:1.2">최대 월 450만 원</div>
-        </div>
-        <div class="abs" style="left:0;top:328px;width:770px;text-align:center;font-size:32px;font-weight:650;color:var(--ink-2)">6+6 부모육아휴직제 · 통상임금 100%</div>
-        <div class="abs chip ink" data-r="qB" style="right:36px;top:48px;height:56px;font-size:28px;padding:0 22px">${icon('key-round', { size: 28 })}조건은?</div>
+        <div class="card" data-r="b${i}" style="left:0;top:0;width:${W}px;height:${H}px">${back}</div>
+      </div>`;
+    const r = mount(root, `${slot(0, back1)}${slot(1, back2)}
+      <div class="abs row" style="left:0;top:806px;width:1920px;justify-content:center">
+        <div class="chip" data-r="c3" style="height:70px;font-size:34px;padding:0 32px;background:var(--coral);color:#fff;box-shadow:0 14px 30px rgba(236,94,71,0.28);padding-left:14px"><div class="center" style="width:48px;height:48px;border-radius:24px;background:#fff;color:var(--coral-2);font-size:28px;font-weight:880">3</div>헷갈리는 포인트 4가지</div>
       </div>`);
-    for (let i = 0; i < 12; i += 2) c.sfx(0.45 + i * 0.05 + 0.35, 'tick', 0.3);
-    c.sfx(tNo + 0.35, 'sparkle', 0.6);
-    c.sfx(H2 + 0.1, 'whoosh', 0.3);
-    c.sfx(H2b + 0.1, 'pop', 0.6);
-    c.sfx(H2c + 0.1, 'pop', 0.6);
-    c.sfx(H2c + 1.6, 'coin', 0.6);
-    c.sfx(H3 + 0.45, 'click', 0.7);
-    c.sfx(H3 + 0.65, 'click', 0.6);
+    const tOpen = [I2, I3];
+    c.sfx(0.45, 'pop', 0.4); c.sfx(0.57, 'pop', 0.4);
+    tOpen.forEach((o) => { c.sfx(o, 'whoosh', 0.25); c.sfx(o + 0.25, 'pop', 0.5); });
+    c.sfx(I2b + 0.2, 'sparkle', 0.5);
+    c.sfx(I3b + 0.1, 'coin', 0.55);
+    c.sfx(I4 + 0.45, 'click', 0.7);
     return (t) => {
       hd(t);
-      for (let i = 0; i < 18; i++) {
-        const t0 = i < 12 ? 0.45 + i * 0.05 : tNo + 0.2 + (i - 12) * 0.07;
-        drop(B[`b${i}`], t, t0, { h: 170, out: rowOut, od: 0.3 });
-      }
-      enter(B.l12, t, 1.35, { dy: 12, out: rowOut, od: 0.3 });
-      enter(B.l6, t, tNo + 0.9, { dy: 12, out: rowOut, od: 0.3 });
-      const pout = H2b - 0.35;
-      enter(r.mom, t, H2 + 0.05, { dx: -140, dy: 0, out: pout, r: wave(t, 3.2, 2) });
-      enter(r.dad, t, H2 + 0.2, { dx: 140, dy: 0, out: pout, r: wave(t, 3.6, -2) });
-      pop(r.plus, t, H2 + 0.6, { out: pout });
-      blink(r.mom, t, 1);
-      blink(r.dad, t, 2);
-      enter(r.cA, t, H2b, { dx: -60, dy: 30 });
-      enter(r.cB, t, H2c, { dx: 60, dy: 30 });
-      pop(r.qA, t, H3 + 0.45, { r: wave(t, 2.2, 3) });
-      pop(r.qB, t, H3 + 0.65, { r: wave(t, 2.4, -3) });
-    };
-  },
-};
-
-// ------------------------------------------------------------------ 2. 타이틀
-const title = {
-  id: 'title',
-  build(root, c) {
-    const T = c.start;
-    const r = mount(root, `
-      <div class="abs col" style="left:150px;top:270px;width:1060px">
-        <div data-r="eye" class="eyebrow" style="align-self:flex-start">${icon('timer', { size: 28 })}3분 정리 · 2026년 9월 기준</div>
-        <div style="overflow:hidden;height:130px;margin-top:30px"><div data-r="l1" class="disp" style="font-size:112px">육아휴직 <span class="hl-mint">1년 6개월</span></div></div>
-        <div style="overflow:hidden;height:130px;margin-top:0"><div data-r="l2" class="disp" style="font-size:112px"><span style="color:var(--ink-3)">&amp;</span> <span class="hl-gold">6+6</span> 부모육아휴직제</div></div>
-      </div>
-      <div class="abs" data-r="fam" style="left:1160px;top:300px">${family(680)}</div>`);
-    c.sfx(T - 0.6, 'swell', 0.5);
-    c.sfx(T + 0.15, 'ding', 0.5);
-    return (t) => {
-      enter(r.eye, t, T + 0.05, { dy: 20 });
-      rise(r.l1, t, T + 0.12);
-      rise(r.l2, t, T + 0.3);
-      enter(r.fam, t, T + 0.2, { dy: 60, s0: 0.85, y: wave(t, 3, 6) });
-      blink(r.fam, t, 3);
+      [0, 1].forEach((i) => {
+        enter(r[`s${i}`], t, 0.35 + i * 0.12, { dy: 50 });
+        flip(r[`f${i}`], r[`b${i}`], t, tOpen[i], 0.5);
+        const focus = t >= tOpen[i] && t < (i === 0 ? I3 : I4);
+        r[`b${i}`].style.boxShadow = focus ? `0 0 0 5px var(--${i === 0 ? 'mint' : 'gold'}), var(--shadow)` : 'var(--shadow)';
+        r[`s${i}`].style.zIndex = focus ? 2 : 1;
+        const sc = 1 + 0.03 * (focus ? P(t, tOpen[i] + 0.4, 0.4) : 0);
+        r[`s${i}`].style.transform += ` scale(${sc.toFixed(4)})`;
+      });
+      for (let i = 0; i < 18; i++) drop(r[`t${i}`], t, i < 12 ? I2 + 0.45 + i * 0.03 : I2b + 0.15 + (i - 12) * 0.08, { h: 40 });
+      V.forEach((_, i) => drop(r[`st${i}`], t, I3b + 0.1 + i * 0.08, { h: 36 }));
+      pop(r.c3, t, I4 + 0.45, { r: wave(t, 2.4, 1.5) });
     };
   },
 };
@@ -213,12 +193,13 @@ function parentRows(root, { n = 18, y1, y2, prefix, cls = 'empty' }) {
 const basic = {
   id: 'basic',
   build(root, c) {
-    const B2 = c.at('b1', 1), B3 = c.at('b1', 2);
-    const tMom = B2 + 0.15, tDad = B2 + 0.85, tPlus = B3 + 0.3;
+    const B2 = c.at('b1', 1), B3 = c.at('b1', 2), B4 = c.at('b1', 3);
+    const tMom = B2 + 0.15, tDad = B2 + 0.85, tPlus = B4 + 0.1;
     const hd = header(root, {
       y: 150,
       lines: [
-        { html: '기본은 부모 각자 <span class="hl-mint">1년</span>', at: c.in + 0.15 },
+        { html: '<span class="hl-mint">6개월 연장</span> 제도', at: c.in + 0.15 },
+        { html: '기본은 부모 각자 <span class="hl-mint">1년</span>', at: B2 },
         { html: '조건 채우면 <span class="hl-gold">+6개월</span>', at: B3 },
       ],
     });
@@ -256,7 +237,7 @@ const basic = {
 const conditions = {
   id: 'conditions',
   build(root, c) {
-    const opens = [c.at('c1', 1), c.at('c1', 2), c.at('c1', 3)];
+    const opens = [c.at('c1', 1), c.at('c1', 3), c.at('c1', 4)];
     const hd = header(root, {
       y: 150,
       lines: [{ html: '셋 중 <span class="hl-gold">하나만</span> 해당돼도 1년 6개월', at: c.in + 0.1 }],
@@ -375,7 +356,7 @@ const qa1 = {
   id: 'qa1',
   build(root, c) {
     const Qa = c.at('a1q', 1), A = c.at('a1a'), A2 = c.at('a1a', 1);
-    const head = qaHead(root, { n: 1, q: '배우자가 자영업자·전업주부라면?', tChip: c.in, tQ: Qa });
+    const head = qaHead(root, { n: 1, sys: 'ext', q: '배우자가 자영업자·전업주부라면?', tChip: c.in, tQ: Qa });
     const who = [['briefcase', '자영업자'], ['laptop', '프리랜서'], ['house', '전업주부']];
     const r = mount(root, `
       <div class="abs disp" data-r="ans" style="left:150px;top:352px;font-size:86px;color:var(--red)">첫 번째 조건으론 연장 불가</div>
@@ -386,7 +367,7 @@ const qa1 = {
           <div class="abs" data-r="x${i}" style="right:-14px;top:-14px;width:60px;height:60px">${NO_BADGE}</div>
         </div>`).join('')}
       <div class="card" data-r="note" style="left:980px;top:510px;width:790px;height:250px;padding:40px 44px">
-        <div class="row" style="gap:14px;font-size:32px;font-weight:780"><span style="width:40px;height:40px;display:inline-block">${OK_BADGE}</span>이런 경우는 가능해요</div>
+        <div class="row" style="gap:14px;font-size:32px;font-weight:780"><span style="width:40px;height:40px;display:inline-block">${OK_BADGE}</span>이런 경우는 가능합니다</div>
         <div style="margin-top:20px;font-size:29px;font-weight:640;color:var(--ink-2);line-height:1.6">· 배우자가 공무원·교원이면 그 육아휴직도 인정<br>· 한부모·중증 장애아동 부모는 해당되면 1년 6개월</div>
       </div>`);
     c.sfx(c.in + 0.1, 'pop', 0.45);
@@ -409,11 +390,11 @@ const qa2 = {
   id: 'qa2',
   build(root, c) {
     const Qa = c.at('a2q', 1), A = c.at('a2a'), A2 = c.at('a2a', 1), A3 = c.at('a2a', 2);
-    const head = qaHead(root, { n: 2, q: '배우자가 곧 3개월을 채울 예정이면, 미리 신청?', tChip: c.in, tQ: Qa, qSize: 46 });
+    const head = qaHead(root, { n: 2, sys: 'ext', q: '배우자가 곧 3개월을 채울 예정이면, 미리 신청?', tChip: c.in, tQ: Qa, qSize: 46 });
     const blk = (x, cls, label = '') => `<div class="block ${cls}" style="left:${x}px;top:120px;width:118px;height:104px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:var(--blue-2)">${label}</div>`;
     const r = mount(root, `
-      <div class="abs disp" data-r="ans" style="left:150px;top:352px;font-size:86px;color:var(--red)">아니요, 함정 주의!</div>
-      <div class="abs" data-r="exp" style="left:150px;top:470px;font-size:40px;font-weight:760;letter-spacing:-0.03em;white-space:nowrap">추가 6개월 신청 시점에 <span class="mark">배우자 3개월 사용이 이미 확인</span>돼야 해요</div>
+      <div class="abs disp" data-r="ans" style="left:150px;top:352px;font-size:86px;color:var(--red)">아닙니다, 함정 주의!</div>
+      <div class="abs" data-r="exp" style="left:150px;top:470px;font-size:40px;font-weight:760;letter-spacing:-0.03em;white-space:nowrap">추가 6개월 신청 시점에 <span class="mark">배우자 3개월 사용이 이미 확인</span>되어야 합니다</div>
       <div class="card" data-r="p1" style="left:150px;top:570px;width:790px;height:290px">
         <div class="abs" style="left:44px;top:38px;font-size:32px;font-weight:780">아빠 2개월 사용 + 1개월 예정</div>
         <div data-r="p1b">${blk(44, 'blue')}${blk(176, 'blue')}${blk(308, 'ghost', '예정')}</div>
@@ -633,13 +614,13 @@ const qa3 = {
   id: 'qa3',
   build(root, c) {
     const Qa = c.at('a3q', 1), A = c.at('a3a'), A2 = c.at('a3a', 1), A3 = c.at('a3a', 2);
-    const head = qaHead(root, { n: 3, q: '그럼 누구나 월 450만 원 받나요?', tChip: c.in, tQ: Qa });
+    const head = qaHead(root, { n: 3, sys: 'six', q: '6+6이면 누구나 월 450만 원?', tChip: c.in, tQ: Qa });
     const V = [250, 250, 300, 350, 400, 450];
     const base = 890, bw = 112, bh = 26, gap = 5, pitch = 142, x0 = 190;
     const cols = stairs(root, { x0, base, bw, bh, gap, pitch, counts: V.map((v) => v / 50), ref: 'm' });
     const lineY = base - 6 * (bh + gap) - 2;
     const r = mount(root, `
-      <div class="abs disp" data-r="ans" style="left:150px;top:352px;font-size:86px;color:var(--red)">아니요, 450만 원은 ‘상한’</div>
+      <div class="abs disp" data-r="ans" style="left:150px;top:352px;font-size:86px;color:var(--red)">아닙니다, 450만 원은 ‘상한’</div>
       <div class="abs" data-r="line" style="left:${x0 - 30}px;top:${lineY}px;width:${5 * pitch + bw + 60}px;height:0;border-top:5px dashed var(--blue);transform-origin:0 50%"></div>
       <div class="abs chip blue" data-r="tag" style="left:${x0 + 5 * pitch + bw + 50}px;top:${lineY - 30}px;height:60px;font-size:30px;padding:0 24px;background:var(--blue);color:#fff">${icon('user', { size: 30 })}내 통상임금 월 300만 원</div>
       <div class="abs" data-r="res" style="left:${x0 + 5 * pitch + bw + 50}px;top:${lineY + 56}px;font-size:40px;font-weight:800;letter-spacing:-0.03em;line-height:1.45;white-space:nowrap">셋째 달부터 계속 <span class="hl-blue">월 300만 원</span><br><span style="font-size:28px;font-weight:650;color:var(--ink-3)">(첫째·둘째 달은 250만 원)</span></div>`);
@@ -667,7 +648,7 @@ const qa4 = {
   id: 'qa4',
   build(root, c) {
     const Qa = c.at('a4q', 1), A = c.at('a4a'), A2 = c.at('a4a', 1), A3 = c.at('a4a', 2), A4 = c.at('a4a', 3);
-    const head = qaHead(root, { n: 4, q: '엄마 6개월, 아빠 3개월만 쓰면요?', tChip: c.in, tQ: Qa });
+    const head = qaHead(root, { n: 4, sys: 'six', q: '엄마 6개월, 아빠 3개월이라면?', tChip: c.in, tQ: Qa });
     const S = 112, PIT = 130, X = 330, YM = 530, YD = 680;
     let bl = '';
     for (let i = 0; i < 6; i++) bl += `<div class="block coral" data-r="m${i}" style="left:${X + i * PIT}px;top:${YM}px;width:${S}px;height:${S}px;border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#fff">${i + 1}</div>`;
@@ -751,9 +732,9 @@ const summary = {
   id: 'summary',
   build(root, c) {
     const items = [
-      { color: 'mint', ic: 'calendar-plus', title: '기간 <span class="hl-mint">최대 1년 6개월</span>', sub: '엄마·아빠 각각 3개월 이상 (한부모·중증 장애아동 부모 포함) · 부부 최대 3년', at: c.at('u2') },
-      { color: 'gold', ic: 'coins', title: '6+6: 첫 6개월 <span class="hl-gold">최대 월 450만 원</span>', sub: '생후 18개월 전 부모 모두 휴직 시작 · 통상임금 100% · 1인 최대 2,000만 원', at: c.at('u3') },
-      { color: 'blue', ic: 'laptop', title: '휴직은 <span class="hl-blue">30일 전</span> 회사에 · 급여는 <span class="hl-blue">고용24</span>', sub: '급여는 휴직이 끝난 뒤 12개월 안에 신청해야 받을 수 있어요', at: c.at('u4') },
+      { color: 'mint', ic: 'calendar-plus', title: '기간 <span class="hl-mint">최대 1년 6개월</span>', sub: '엄마·아빠 각각 3개월 이상 (한부모·중증 장애아동 부모 포함) · 부부 최대 3년', at: c.at('u1') },
+      { color: 'gold', ic: 'coins', title: '6+6: 첫 6개월 <span class="hl-gold">최대 월 450만 원</span>', sub: '생후 18개월 전 부모 모두 휴직 시작 · 통상임금 100% · 1인 최대 2,000만 원', at: c.at('u2') },
+      { color: 'blue', ic: 'laptop', title: '휴직은 <span class="hl-blue">30일 전</span> 회사에 · 급여는 <span class="hl-blue">고용24</span>', sub: '급여는 휴직이 끝난 뒤 12개월 안에 신청해야 합니다', at: c.at('u3') },
     ];
     const hd = header(root, { y: 130, lines: [{ html: '<span class="hl-blue">3줄</span> 요약', at: c.in }] });
     const Y = [290, 490, 690];
@@ -801,7 +782,7 @@ const outro = {
       </div>
       <div class="abs chip gold" data-r="nx" style="left:150px;top:210px;height:62px;font-size:32px;padding:0 26px;background:var(--gold);color:#fff">${icon('bell', { size: 32 })}다음 영상</div>
       <div class="abs disp" data-r="nt" style="left:150px;top:300px;font-size:116px">1주·2주 <span class="hl-gold">단기 육아휴직</span></div>
-      <div class="abs" data-r="ns" style="left:154px;top:450px;font-size:36px;font-weight:700;color:var(--ink-2)">2026년 8월 20일부터 시행 · 연 1회, 나눠 쓰는 횟수에 포함 안 돼요</div>
+      <div class="abs" data-r="ns" style="left:154px;top:450px;font-size:36px;font-weight:700;color:var(--ink-2)">2026년 8월 20일 시행 · 연 1회 · 나눠 쓰는 횟수에 포함되지 않습니다</div>
       <div class="block gold" data-r="w1" style="left:1440px;top:250px;width:150px;height:150px;border-radius:32px;display:flex;align-items:center;justify-content:center"><span class="disp" style="font-size:50px;color:#7A4A00">1주</span></div>
       <div class="block blue" data-r="w2" style="left:1610px;top:250px;width:150px;height:150px;border-radius:32px;display:flex;align-items:center;justify-content:center"><span class="disp" style="font-size:50px;color:#fff">2주</span></div>
       <div class="abs" data-r="fam" style="left:150px;top:560px">${family(420)}</div>
@@ -810,7 +791,7 @@ const outro = {
         <div class="row" style="gap:14px;height:92px;padding:0 42px;border-radius:46px;background:#fff;color:var(--ink);font-size:40px;font-weight:840;box-shadow:var(--shadow)">${icon('thumbs-up', { size: 42, stroke: 2.4 })}좋아요</div>
       </div>
       <div class="abs col center" data-r="disc" style="left:0;top:862px;width:1920px;font-size:24px;font-weight:600;color:var(--ink-3);line-height:1.6">
-        <div>본 영상은 2026년 9월 기준 정보입니다. 개인별 적용 여부는 고용노동부(☎1350)·고용24에서 확인하세요.</div>
+        <div>본 영상은 2026년 9월 기준 정보입니다. 개인별 적용 여부는 고용노동부(☎1350)·고용24에서 확인하시기 바랍니다.</div>
         <div>참고: 남녀고용평등과 일·가정 양립 지원에 관한 법률 · 고용보험법 시행령 · 고용노동부 안내</div>
       </div>`);
     const out1 = O2 - 0.3;
@@ -843,4 +824,4 @@ const outro = {
   },
 };
 
-export const scenes = [hook, title, basic, conditions, both, qa1, qa2, concept66, stairsScene, example, qa3, qa4, key, summary, outro];
+export const scenes = [intro, basic, conditions, both, concept66, stairsScene, example, qa1, qa2, qa3, qa4, key, summary, outro];

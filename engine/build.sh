@@ -18,7 +18,7 @@ import json, sys
 tl = json.load(open(sys.argv[1], encoding="utf-8"))
 s = {x["id"]: x["start"] for x in tl["scenes"]}
 pick = lambda *ks: next(s[k] for k in ks if k in s)
-cuts = [0.0, pick("roadmap", "title", "basic"), pick("concept66", "caps"), pick("scenario", "summary"), pick("outro")]
+cuts = [0.0, pick("roadmap", "title", "basic"), pick("concept66", "caps"), pick("qa1", "scenario", "summary"), pick("outro")]
 print(f"{tl['duration'] + 0.5:.2f}", ",".join(f"{c:.2f}" for c in cuts))
 PY
 )

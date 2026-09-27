@@ -10,7 +10,7 @@ export function buildThumbnail(root) {
 
   <div class="abs row" style="left:96px;top:78px;gap:18px">
     <div class="row" style="height:84px;padding:0 34px;border-radius:42px;background:#F0525A;color:#fff;font-size:44px;font-weight:880;box-shadow:0 12px 28px rgba(240,82,90,0.3)">2026 최신</div>
-    <div class="row" style="gap:12px;height:84px;padding:0 34px;border-radius:42px;background:#1F2A37;color:#fff;font-size:44px;font-weight:840">${icon('timer', { size: 46, stroke: 2.6 })}3분 정리</div>
+    <div class="row" style="gap:12px;height:84px;padding:0 34px;border-radius:42px;background:#1F2A37;color:#fff;font-size:44px;font-weight:840">${icon('list-checks', { size: 46, stroke: 2.6 })}핵심 정리</div>
   </div>
 
   <div class="abs" style="left:92px;top:210px;font-size:196px;font-weight:920;letter-spacing:-0.055em;line-height:1.02;color:#1F2A37;white-space:nowrap">육아휴직</div>

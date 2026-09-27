@@ -135,7 +135,7 @@ const PALETTES = {
   0: ['#FFD9C9', '#CFF1E6', '#DCE8FF'],
   1: ['#CDEFE4', '#DAE7FF', '#FFE1D3'],
   2: ['#FFE6B3', '#FFD9C9', '#D7F1E8'],
-  3: ['#E6E1FF', '#DAE7FF', '#FFE1D3'],
+  3: ['#FFDCD2', '#FFEBC4', '#E4E4FF'],
   4: ['#D2F0E6', '#FFE9BF', '#DCE8FF'],
 };
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
@@ -267,9 +267,9 @@ export async function start({ timeline, scenes, chapters, asOf = '' }) {
         <div class="abs" style="left:-160px;top:-220px;width:760px;height:760px;border-radius:50%;background:rgba(255,255,255,0.10)"></div>
         <div class="abs" style="right:-120px;bottom:-260px;width:680px;height:680px;border-radius:50%;background:rgba(255,255,255,0.08)"></div>
         <div class="abs col" data-r="content${k}" style="left:0;right:0;top:0;bottom:0;align-items:center;justify-content:center;color:#fff">
-          <div class="row" style="gap:14px;height:62px;padding:0 28px;border-radius:31px;background:rgba(255,255,255,0.22);font-size:30px;font-weight:800;letter-spacing:0.04em">${icon(c.icon, { size: 34, stroke: 2.4 })}${c.label}</div>
+          <div class="row" style="gap:14px;height:62px;padding:0 28px;border-radius:31px;background:rgba(255,255,255,0.22);font-size:30px;font-weight:800;letter-spacing:0.04em">${icon(c.icon, { size: 34, stroke: 2.4 })}${c.cardChip ?? c.label}</div>
           <div style="font-size:168px;font-weight:880;letter-spacing:-0.04em;margin-top:26px;line-height:1">${c.title}</div>
-          <div style="font-size:50px;font-weight:700;margin-top:30px;opacity:0.94">${c.sub}</div>
+          <div style="font-size:50px;font-weight:700;margin-top:30px;opacity:0.94">${c.cardSub ?? c.sub}</div>
         </div>
       </div>`);
     const T = chapterRanges[k].start;
