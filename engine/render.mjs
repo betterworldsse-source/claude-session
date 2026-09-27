@@ -5,6 +5,7 @@
 //   node engine/render.mjs video <episode> [--workers 4] [--from 0 --to 20]
 //   node engine/render.mjs still <episode> <t> <out.png>     특정 시점 단일 이미지
 //   node engine/render.mjs thumb <episode> [out.png]         유튜브 썸네일(1280×720)
+//   node engine/render.mjs shorts <episode> [0 2 …]          세로 쇼츠(1080×1920) — episodes/<ep>/shorts.json, mix.wav 필요
 import { chromium } from 'playwright';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -108,6 +109,62 @@ async function main() {
       const events = await page.evaluate(() => window.__sfx);
       fs.writeFileSync(path.join(out, 'sfx.json'), JSON.stringify(events, null, 1));
       console.log(`${events.length} sfx events → build/${ep}/sfx.json`);
+    } else if (mode === 'shorts') {
+      // 세로 쇼츠: episodes/<ep>/shorts.json 의 각 항목을 1080×1920으로 렌더하고 최종 믹스에서 오디오를 잘라 붙입니다.
+      const fps = 30;
+      const list = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes', ep, 'shorts.json'), 'utf8'));
+      const tl = JSON.parse(fs.readFileSync(path.join(out, 'timeline.json'), 'utf8'));
+      const mix = path.join(out, 'mix.wav');
+      if (!fs.existsSync(mix)) throw new Error('build/<ep>/mix.wav 가 없습니다. 먼저 mix.py를 실행하세요.');
+      const dest = path.join(ROOT, 'episodes', ep, 'output', 'shorts');
+      fs.mkdirSync(dest, { recursive: true });
+      const only = rest.filter((x) => !x.startsWith('--')).map(Number);
+      const started = Date.now();
+      await Promise.all(list.map(async (sh, i) => {
+        if (only.length && !only.includes(i)) return;
+        const line = tl.lines.find((l) => l.id === sh.fromLine);
+        const scene = tl.scenes.find((s) => s.id === sh.scene);
+        const t0 = Math.max(0, line.chunks[sh.fromChunk].start - 0.35);
+        const t1 = scene.end - 0.25;
+        const br = await chromium.launch();
+        const page = await br.newPage({ viewport: { width: 1080, height: 1920 } });
+        page.on('pageerror', (e) => console.error('[page error]', e.message));
+        await page.goto(`http://127.0.0.1:${port}/engine/web/shorts.html?ep=${ep}&i=${i}`);
+        await page.waitForFunction(() => window.__shortsReady === true, null, { timeout: 60000 });
+        const silent = path.join(out, `short_${i}_video.mp4`);
+        const ff = spawn('ffmpeg', [
+          '-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-',
+          '-c:v', 'libx264', '-preset', 'slow', '-crf', '19', '-tune', 'animation',
+          '-pix_fmt', 'yuv420p', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709',
+          '-g', String(fps * 2), '-threads', '2', silent,
+        ], { stdio: ['pipe', 'inherit', 'inherit'] });
+        const closed = new Promise((res, rej) => ff.on('close', (c) => (c === 0 ? res() : rej(new Error(`ffmpeg exit ${c}`)))));
+        const f0 = Math.round(t0 * fps), f1 = Math.round(t1 * fps);
+        for (let f = f0; f < f1; f++) {
+          await page.evaluate((tt) => window.renderFrame(tt), f / fps);
+          const buf = await page.screenshot({ type: 'jpeg', quality: 94 });
+          if (!ff.stdin.write(buf)) await new Promise((r) => ff.stdin.once('drain', r));
+        }
+        ff.stdin.end();
+        await closed;
+        await br.close();
+        // 오디오: 같은 구간을 잘라 2패스 loudnorm(-14 LUFS, -1.5 dBTP)
+        const dur = (f1 - f0) / fps;
+        const cut = ['-ss', (f0 / fps).toFixed(3), '-t', dur.toFixed(3), '-i', mix];
+        const fades = `afade=t=in:d=0.08,afade=t=out:st=${(dur - 0.35).toFixed(3)}:d=0.35`;
+        const meas = spawn('ffmpeg', ['-hide_banner', '-nostats', ...cut, '-af', `${fades},loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json`, '-f', 'null', '-']);
+        let err = '';
+        meas.stderr.on('data', (d) => { err += d; });
+        await new Promise((res) => meas.on('close', res));
+        const m = JSON.parse(err.slice(err.lastIndexOf('{'), err.lastIndexOf('}') + 1));
+        const norm = `loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=${m.input_i}:measured_TP=${m.input_tp}:measured_LRA=${m.input_lra}:measured_thresh=${m.input_thresh}:offset=${m.target_offset}:linear=true`;
+        const file = path.join(dest, `${sh.id}.mp4`);
+        execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', silent, ...cut, '-map', '0:v', '-map', '1:a',
+          '-af', `${fades},${norm},aresample=48000`, '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', '-shortest', file]);
+        fs.rmSync(silent);
+        console.log(`short ${i + 1}: ${sh.id} · ${dur.toFixed(1)}s → ${path.relative(ROOT, file)}`);
+      }));
+      console.log(`shorts done in ${((Date.now() - started) / 1000).toFixed(0)}s`);
     } else if (mode === 'video') {
       const fps = +arg('fps', 30);
       const workers = +arg('workers', 4);

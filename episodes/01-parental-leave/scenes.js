@@ -1,5 +1,5 @@
 // 1화: 육아휴직 6개월 연장 제도 & 6+6 부모육아휴직제 — 장면 정의
-// 흐름: 오늘 소개할 제도 두 가지 → ① 6개월 연장 제도(성립 조건) → ② 6+6(어떤 제도인지) → ③ 헷갈리는 포인트 → 정리
+// 흐름: 훅 → 오늘 소개할 제도 두 가지 → ① 6개월 연장 제도(성립 조건) → ② 6+6(어떤 제도인지·월급별 표) → ③ 헷갈리는 포인트 → ④ 신청 방법 → 정리
 // 각 장면은 build(root, ctx)에서 DOM을 만들고, 시간 t를 받는 update 함수를 돌려줍니다.
 // ctx.at('문장id', k) = 해당 문장의 k번째 자막 청크가 시작되는 시각(초)
 // 모든 타이밍이 문장/자막 기준이라, 내 목소리로 녹음을 바꿔도 그래픽이 자동으로 따라갑니다.
@@ -14,7 +14,8 @@ export const chapters = {
   1: { label: '1', sub: '육아휴직 6개월 연장 제도', cardChip: '첫 번째 제도', title: '6개월 연장 제도', cardSub: '육아휴직이 1년 6개월이 되는 조건', short: '연장', color: 'mint', icon: 'calendar-plus', card: ['#2DBFA4', '#138C78'] },
   2: { label: '2', sub: '6+6 부모육아휴직제', cardChip: '두 번째 제도', title: '6+6 부모육아휴직제', cardSub: '첫 6개월 급여를 통상임금 100%로', short: '6+6', color: 'gold', icon: 'coins', card: ['#F9A12B', '#E0700A'] },
   3: { label: '3', sub: '헷갈리는 포인트 4가지', cardChip: '꼭 짚고 갈 것', title: '헷갈리는 포인트', cardSub: '자주 묻는 질문 4가지', short: '포인트', color: 'coral', icon: 'circle-help', card: ['#FF8C74', '#E4553E'] },
-  4: { label: '정리', sub: '3줄 요약', title: '정리', short: '정리', color: 'blue', icon: 'list-checks', card: null },
+  4: { label: '4', sub: '신청 방법 3단계', cardChip: '마지막 체크', title: '신청 방법', cardSub: '회사 → 고용24, 3단계', short: '신청', color: 'blue', icon: 'clipboard-check', card: ['#5B9BFA', '#2F6FE0'] },
+  5: { label: '정리', sub: '3줄 요약', title: '정리', short: '정리', color: 'lav', icon: 'list-checks', card: null },
 };
 
 // 헷갈리는 포인트가 어느 제도에 관한 것인지 표시하는 태그
@@ -100,19 +101,33 @@ function stairs(root, { x0, base, bw, bh, gap, pitch, counts, cls = 'gold', ref 
   return counts.map((n, i) => Array.from({ length: n }, (_, k) => r[`${ref}_${i}_${k}`]));
 }
 
-// ------------------------------------------------------------------ 1. 도입부: 오늘 소개할 제도 두 가지
+// ------------------------------------------------------------------ 1. 도입부: 훅(부부 최대 3년·4천만 원) → 오늘 소개할 제도 두 가지
 const intro = {
   id: 'intro',
   build(root, c) {
-    const I2 = c.at('i2'), I2b = c.at('i2', 1), I3 = c.at('i3'), I3b = c.at('i3', 1), I4 = c.at('i4');
+    const H0 = c.at('h0'), H0b = c.at('h0', 1), I1 = c.at('i1'), I2 = c.at('i2'), I3 = c.at('i3'), I4 = c.at('i4');
     const hd = header(root, {
       y: 150, size: 92,
       lines: [
-        { html: '오늘 소개할 육아휴직 제도 <span class="hl-coral">2가지</span>', at: 0.12 },
-        { html: '헷갈리는 포인트까지 <span class="hl-coral">차례대로</span>', at: I4 },
+        { html: '부부가 <span class="hl-coral">함께</span> 쓰면', at: 0.12 },
+        { html: '오늘 소개할 육아휴직 제도 <span class="hl-coral">2가지</span>', at: I1 },
+        { html: '헷갈리는 포인트와 <span class="hl-blue">신청 방법</span>까지', at: I4 },
       ],
     });
     const W = 770, H = 440, X = [170, 980], Y = 330;
+    // 훅: 기간 최대 3년 · 급여 최대 4,000만 원
+    const badge = (ic, color) => `<div class="icon-badge" style="width:78px;height:78px;border-radius:24px;background:var(--${color}-soft);color:var(--${color}-2)">${icon(ic, { size: 44 })}</div>`;
+    const hook = mount(root, `
+      <div class="card col" data-r="hA" style="left:${X[0]}px;top:${Y}px;width:${W}px;height:${H}px;align-items:center;padding-top:54px">
+        <div class="row" style="gap:16px">${badge('calendar-plus', 'mint')}<div style="font-size:40px;font-weight:800;color:var(--ink-2)">육아휴직 기간</div></div>
+        <div class="disp" style="margin-top:40px;font-size:156px;line-height:1;color:var(--mint-2)">최대 3년</div>
+        <div style="margin-top:40px;font-size:30px;font-weight:650;color:var(--ink-3)">부부 합산 · 각자 1년 6개월</div>
+      </div>
+      <div class="card col" data-r="hB" style="left:${X[1]}px;top:${Y}px;width:${W}px;height:${H}px;align-items:center;padding-top:54px">
+        <div class="row" style="gap:16px">${badge('coins', 'gold')}<div style="font-size:40px;font-weight:800;color:var(--ink-2)">첫 6개월 급여</div></div>
+        <div class="row" style="margin-top:40px;align-items:baseline;gap:10px;color:var(--gold-2)"><span class="disp" style="font-size:62px">최대</span><span class="disp num" data-r="amt" style="font-size:140px;line-height:1">0</span><span class="disp" style="font-size:62px">만 원</span></div>
+        <div style="margin-top:40px;font-size:30px;font-weight:650;color:var(--ink-3)">부부 합산 · 6+6 부모육아휴직제</div>
+      </div>`);
     const numDot = (n, color) => `<div class="center" style="width:64px;height:64px;border-radius:32px;background:var(--${color});color:#fff;font-size:36px;font-weight:880;flex:none">${n}</div>`;
     const cap = (html) => `<div class="abs" style="left:0;top:366px;width:${W}px;text-align:center;font-size:30px;font-weight:680;color:var(--ink-2)">${html}</div>`;
     // ① 기간: 1년 → 1년 6개월 + 18칸 블록 줄 (12칸 + 6칸)
@@ -130,15 +145,15 @@ const intro = {
       ${cap('휴직 <b style="color:var(--mint-2)">기간</b>이 늘어나는 제도')}`;
     // ② 급여: 첫 6개월 상한 + 미니 계단
     const V = [250, 250, 300, 350, 400, 450], SW = 40, SG = 10, SX = Math.round((W - (6 * (SW + SG) - SG)) / 2);
-    let steps = '';
-    V.forEach((v, i) => { const h = Math.round((v / 450) * 46); steps += `<div class="block gold" data-r="st${i}" style="left:${SX + i * (SW + SG)}px;top:${334 - h}px;width:${SW}px;height:${h}px;border-radius:8px"></div>`; });
+    let mini = '';
+    V.forEach((v, i) => { const h = Math.round((v / 450) * 46); mini += `<div class="block gold" data-r="st${i}" style="left:${SX + i * (SW + SG)}px;top:${334 - h}px;width:${SW}px;height:${h}px;border-radius:8px"></div>`; });
     const back2 = `
       <div class="abs row" style="left:44px;top:40px;gap:18px">${numDot(2, 'gold')}<div style="font-size:40px;font-weight:820;letter-spacing:-0.035em;white-space:nowrap">6+6 부모육아휴직제</div></div>
       <div class="abs col" style="left:0;top:122px;width:${W}px;align-items:center">
         <div style="font-size:32px;font-weight:720;color:var(--ink-2)">첫 6개월 급여 상한</div>
         <div class="disp" style="font-size:94px;color:var(--gold-2);line-height:1.2">최대 월 450만 원</div>
       </div>
-      ${steps}
+      ${mini}
       ${cap('휴직 <b style="color:var(--gold-2)">급여</b>가 늘어나는 제도')}`;
     const slot = (i, back) => `
       <div class="abs" data-r="s${i}" style="left:${X[i]}px;top:${Y}px;width:${W}px;height:${H}px">
@@ -147,20 +162,29 @@ const intro = {
         </div>
         <div class="card" data-r="b${i}" style="left:0;top:0;width:${W}px;height:${H}px">${back}</div>
       </div>`;
+    const nchip = (ref, n, color, text) => `<div class="chip" data-r="${ref}" style="height:70px;font-size:34px;padding:0 32px 0 14px;background:var(--${color});color:#fff;box-shadow:0 14px 30px rgba(31,42,55,0.16)"><div class="center" style="width:48px;height:48px;border-radius:24px;background:#fff;color:var(--${color}-2);font-size:28px;font-weight:880">${n}</div>${text}</div>`;
     const r = mount(root, `${slot(0, back1)}${slot(1, back2)}
-      <div class="abs row" style="left:0;top:806px;width:1920px;justify-content:center">
-        <div class="chip" data-r="c3" style="height:70px;font-size:34px;padding:0 32px;background:var(--coral);color:#fff;box-shadow:0 14px 30px rgba(236,94,71,0.28);padding-left:14px"><div class="center" style="width:48px;height:48px;border-radius:24px;background:#fff;color:var(--coral-2);font-size:28px;font-weight:880">3</div>헷갈리는 포인트 4가지</div>
+      <div class="abs row" style="left:0;top:806px;width:1920px;justify-content:center;gap:22px">
+        ${nchip('c3', 3, 'coral', '헷갈리는 포인트 4가지')}${nchip('c4', 4, 'blue', '신청 방법 3단계')}
       </div>`);
     const tOpen = [I2, I3];
-    c.sfx(0.45, 'pop', 0.4); c.sfx(0.57, 'pop', 0.4);
+    const hookOut = I1 - 0.35;
+    c.sfx(H0 + 0.3, 'pop', 0.55);
+    c.sfx(H0b + 0.1, 'pop', 0.55);
+    c.sfx(H0b + 1.35, 'coin', 0.7);
+    c.sfx(I1 + 0.2, 'pop', 0.4); c.sfx(I1 + 0.32, 'pop', 0.4);
     tOpen.forEach((o) => { c.sfx(o, 'whoosh', 0.25); c.sfx(o + 0.25, 'pop', 0.5); });
-    c.sfx(I2b + 0.2, 'sparkle', 0.5);
-    c.sfx(I3b + 0.1, 'coin', 0.55);
-    c.sfx(I4 + 0.45, 'click', 0.7);
+    c.sfx(I2 + 1.3, 'sparkle', 0.5);
+    c.sfx(I3 + 0.95, 'coin', 0.55);
+    c.sfx(I4 + 0.45, 'click', 0.6);
+    c.sfx(I4 + 0.75, 'click', 0.6);
     return (t) => {
       hd(t);
+      enter(hook.hA, t, H0 + 0.2, { dx: -60, dy: 30, out: hookOut });
+      enter(hook.hB, t, H0b, { dx: 60, dy: 30, out: hookOut });
+      countTo(hook.amt, t, H0b + 0.2, 1.2, 0, 4000);
       [0, 1].forEach((i) => {
-        enter(r[`s${i}`], t, 0.35 + i * 0.12, { dy: 50 });
+        enter(r[`s${i}`], t, I1 + 0.15 + i * 0.12, { dy: 50 });
         flip(r[`f${i}`], r[`b${i}`], t, tOpen[i], 0.5);
         const focus = t >= tOpen[i] && t < (i === 0 ? I3 : I4);
         r[`b${i}`].style.boxShadow = focus ? `0 0 0 5px var(--${i === 0 ? 'mint' : 'gold'}), var(--shadow)` : 'var(--shadow)';
@@ -168,9 +192,10 @@ const intro = {
         const sc = 1 + 0.03 * (focus ? P(t, tOpen[i] + 0.4, 0.4) : 0);
         r[`s${i}`].style.transform += ` scale(${sc.toFixed(4)})`;
       });
-      for (let i = 0; i < 18; i++) drop(r[`t${i}`], t, i < 12 ? I2 + 0.45 + i * 0.03 : I2b + 0.15 + (i - 12) * 0.08, { h: 40 });
-      V.forEach((_, i) => drop(r[`st${i}`], t, I3b + 0.1 + i * 0.08, { h: 36 }));
+      for (let i = 0; i < 18; i++) drop(r[`t${i}`], t, i < 12 ? I2 + 0.45 + i * 0.03 : I2 + 1.25 + (i - 12) * 0.08, { h: 40 });
+      V.forEach((_, i) => drop(r[`st${i}`], t, I3 + 0.85 + i * 0.08, { h: 36 }));
       pop(r.c3, t, I4 + 0.45, { r: wave(t, 2.4, 1.5) });
+      pop(r.c4, t, I4 + 0.75, { r: wave(t, 2.6, -1.5) });
     };
   },
 };
@@ -609,6 +634,58 @@ const example = {
   },
 };
 
+// ------------------------------------------------------------------ 11. 월급별 비교표 (6개월 · 한 사람 기준)
+const table = {
+  id: 'table',
+  build(root, c) {
+    const W2 = c.at('w1', 1);
+    const hd = header(root, { y: 140, lines: [{ html: '<span class="hl-gold">월급별</span>로 보면', at: c.in + 0.05 }] });
+    const rows = [
+      { wage: '월 200만 원', base: 1200, six: 1200, diff: 0 },
+      { wage: '월 300만 원', base: 1350, six: 1700, diff: 350 },
+      { wage: '월 400만 원', base: 1350, six: 1950, diff: 600 },
+      { wage: '월 500만 원 이상', base: 1350, six: 2000, diff: 650 },
+    ];
+    const TX = 300, TW = 1320, TY = 300, HR = 92, RH = 110;
+    const cx = [48, 560, 830, 1080];
+    const fmt = (v) => v.toLocaleString('en-US');
+    const cell = (x, w, html, align = 'center') => `<div class="abs row" style="left:${x}px;top:0;width:${w}px;height:${RH}px;justify-content:${align}">${html}</div>`;
+    let body = '';
+    rows.forEach((k, i) => {
+      const diff = k.diff > 0
+        ? `<div class="chip" style="height:56px;font-size:30px;padding:0 24px;background:var(--green);color:#fff">+${fmt(k.diff)}</div>`
+        : `<div class="chip" data-r="same" style="height:56px;font-size:28px;padding:0 22px;background:#EEF0F3;color:var(--ink-2)">차이 없음</div>`;
+      body += `<div class="abs" data-r="row${i}" style="left:0;top:${HR + i * RH}px;width:${TW}px;height:${RH}px;border-top:2px solid var(--line)">
+        ${cell(cx[0], 460, `<span style="font-size:38px;font-weight:800">${k.wage}</span>`, 'flex-start')}
+        ${cell(cx[1] - 60, 240, `<span class="num" style="font-size:42px;font-weight:760;color:var(--ink-2)">${fmt(k.base)}</span>`)}
+        ${cell(cx[2] - 60, 240, `<span class="num" style="font-size:46px;font-weight:880;color:var(--gold-2)">${fmt(k.six)}</span>`)}
+        ${cell(cx[3] - 40, 260, diff)}
+      </div>`;
+    });
+    const th = (x, w, text, align = 'center') => `<div class="abs row" style="left:${x}px;top:0;width:${w}px;height:${HR}px;justify-content:${align};font-size:28px;font-weight:760;color:var(--ink-3)">${text}</div>`;
+    const r = mount(root, `
+      <div class="abs" data-r="sub" style="left:0;top:252px;width:1920px;text-align:center;font-size:30px;font-weight:650;color:var(--ink-3)">첫 6개월 · 한 사람 기준 · 단위 만 원</div>
+      <div class="card" data-r="tbl" style="left:${TX}px;top:${TY}px;width:${TW}px;height:${HR + rows.length * RH + 16}px;overflow:hidden">
+        <div class="abs" data-r="hl" style="left:0;top:${HR}px;width:${TW}px;height:${RH}px;background:var(--coral-soft)"></div>
+        ${th(cx[0], 460, '통상임금', 'flex-start')}${th(cx[1] - 60, 240, '일반 급여')}${th(cx[2] - 60, 240, '<span style="color:var(--gold-2)">6+6</span>')}${th(cx[3] - 40, 260, '더 받는 금액')}
+        ${body}
+      </div>`);
+    rows.forEach((_, i) => c.sfx(c.in + 0.55 + i * 0.22, 'tick', 0.4));
+    c.sfx(W2 + 0.25, 'pop', 0.6);
+    return (t) => {
+      hd(t);
+      enter(r.sub, t, c.in + 0.3, { dy: 12 });
+      enter(r.tbl, t, c.in + 0.2, { dy: 40 });
+      const focus = P(t, W2 + 0.15, 0.4);
+      rows.forEach((_, i) => {
+        enter(r[`row${i}`], t, c.in + 0.5 + i * 0.22, { dx: -30, dy: 0, o: i === 0 ? 1 : 1 - 0.45 * focus });
+      });
+      opacity(r.hl, focus);
+      pop(r.same, t, W2 + 0.25, { s0: 0.6 });
+    };
+  },
+};
+
 // ------------------------------------------------------------------ 11. 헷갈리는 포인트 3: 누구나 450만 원?
 const qa3 = {
   id: 'qa3',
@@ -702,27 +779,55 @@ const qa4 = {
   },
 };
 
-// ------------------------------------------------------------------ 13. 열쇠는 하나
-const key = {
-  id: 'key',
+// ------------------------------------------------------------------ 17. 신청 방법 3단계
+const steps = {
+  id: 'steps',
   build(root, c) {
-    const Y1 = c.at('y1'), Y2 = c.at('y1', 1);
-    const r = mount(root, `
-      <div class="abs center" data-r="kb" style="left:890px;top:200px;width:140px;height:140px;border-radius:42px;background:var(--gold-soft);color:var(--gold-2);box-shadow:var(--shadow-sm)">${icon('key-round', { size: 84, stroke: 2.2 })}</div>
-      <div class="abs disp" data-r="k1" style="left:0;top:390px;width:1920px;text-align:center;font-size:88px">두 제도의 열쇠는 <span class="hl-gold">하나</span></div>
-      <div class="abs disp" data-r="k2" style="left:0;top:520px;width:1920px;text-align:center;font-size:132px;color:var(--coral-2)">부모가 둘 다 쓴다</div>
-      <div class="abs" data-r="av1" style="left:800px;top:720px">${avatar('mom', 130)}</div>
-      <div class="abs" data-r="av2" style="left:990px;top:720px">${avatar('dad', 130)}</div>
-      <div class="abs" data-r="hrt" style="left:930px;top:690px;width:60px;height:60px"><svg viewBox="0 0 24 24" width="100%" height="100%"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 5.3 3.1 1.7-1.9 3.2-3.1 5.3-3.1 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z" fill="#FF7D66"/></svg></div>`);
-    c.sfx(Y1 - 0.2, 'pop', 0.6);
-    c.sfx(Y2 + 0.1, 'ding', 0.6);
+    const S1 = c.at('p1', 1), S2 = c.at('p1', 2), S3 = c.at('p2'), S4 = c.at('p2', 2);
+    const hd = header(root, { y: 140, lines: [{ html: '신청은 <span class="hl-blue">3단계</span>', at: c.in + 0.05 }] });
+    const items = [
+      { ic: 'briefcase', who: '나 → 회사', title: '휴직 신청', chip: '휴직 시작 30일 전까지', desc: '육아휴직 신청서 제출', at: S1, color: 'blue' },
+      { ic: 'file-text', who: '회사 → 고용센터', title: '확인서 제출', chip: '육아휴직 확인서', desc: '회사가 처리합니다', at: S2, color: 'lav' },
+      { ic: 'laptop', who: '나 → 고용24', title: '급여 신청', chip: '휴직 1개월 뒤부터', desc: '휴직 종료 후 12개월 안에', at: S3, color: 'mint' },
+    ];
+    const W = 480, H = 420, X = [150, 720, 1290], Y = 300;
+    const card = (k, i) => `
+      <div class="abs" data-r="s${i}" style="left:${X[i]}px;top:${Y}px;width:${W}px;height:${H}px">
+        <div class="card col center" data-r="f${i}" style="left:0;top:0;width:${W}px;height:${H}px;background:rgba(255,255,255,0.55);border:4px dashed rgba(31,42,55,0.16);box-shadow:none">
+          <div class="disp" style="font-size:180px;line-height:1;color:rgba(31,42,55,0.12)">${i + 1}</div>
+        </div>
+        <div class="card" data-r="b${i}" style="left:0;top:0;width:${W}px;height:${H}px">
+          <div class="abs center" style="left:30px;top:30px;width:56px;height:56px;border-radius:28px;background:var(--${k.color});color:#fff;font-size:30px;font-weight:880">${i + 1}</div>
+          <div class="abs icon-badge" style="left:${(W - 120) / 2}px;top:52px;width:120px;height:120px;border-radius:36px;background:var(--${k.color}-soft);color:var(--${k.color}-2)">${icon(k.ic, { size: 64 })}</div>
+          <div class="abs" style="left:0;top:196px;width:${W}px;text-align:center;font-size:26px;font-weight:700;color:var(--ink-3)">${k.who}</div>
+          <div class="abs" style="left:0;top:232px;width:${W}px;text-align:center;font-size:48px;font-weight:840;letter-spacing:-0.035em">${k.title}</div>
+          <div class="abs row" style="left:0;top:306px;width:${W}px;justify-content:center"><div class="chip ${k.color}" style="height:52px;font-size:27px;padding:0 22px">${k.chip}</div></div>
+          <div class="abs" style="left:0;top:372px;width:${W}px;text-align:center;font-size:24px;font-weight:620;color:var(--ink-3)">${k.desc}</div>
+        </div>
+      </div>`;
+    const arrow = (i) => `<div class="abs center" data-r="a${i}" style="left:${X[i] + W + 2}px;top:${Y + H / 2 - 44}px;width:86px;height:88px;color:#AAB3C0">${icon('arrow-right', { size: 58, stroke: 3 })}</div>`;
+    const r = mount(root, `${items.map(card).join('')}${arrow(0)}${arrow(1)}
+      <div class="abs row" style="left:0;top:772px;width:1920px;justify-content:center">
+        <div class="chip" data-r="warn" style="height:72px;font-size:33px;padding:0 32px;background:var(--red);color:#fff;box-shadow:0 14px 30px rgba(240,82,90,0.28)">${icon('triangle-alert', { size: 36, stroke: 2.4 })}휴직 종료 후 12개월이 지나면 급여를 받을 수 없습니다</div>
+      </div>`);
+    c.sfx(c.in + 0.3, 'pop', 0.4);
+    items.forEach((k) => { c.sfx(k.at, 'whoosh', 0.25); c.sfx(k.at + 0.25, 'pop', 0.5); });
+    c.sfx(S4 + 0.3, 'click', 0.7);
     return (t) => {
-      pop(r.kb, t, c.in, { r: wave(t, 2.6, 4) });
-      enter(r.k1, t, Y1, { dy: 30 });
-      pop(r.k2, t, Y2, { s0: 0.7, d: 0.55 });
-      drop(r.av1, t, Y2 + 0.4, { h: 44 });
-      drop(r.av2, t, Y2 + 0.55, { h: 44 });
-      pop(r.hrt, t, Y2 + 1.0, { y: wave(t, 1.4, 6) });
+      hd(t);
+      items.forEach((k, i) => {
+        enter(r[`s${i}`], t, c.in + 0.2 + i * 0.12, { dy: 50 });
+        flip(r[`f${i}`], r[`b${i}`], t, k.at, 0.5);
+        const until = i < 2 ? items[i + 1].at : S4;
+        const focus = t >= k.at && t < until;
+        r[`b${i}`].style.boxShadow = focus ? `0 0 0 5px var(--${k.color}), var(--shadow)` : 'var(--shadow)';
+        r[`s${i}`].style.zIndex = focus ? 2 : 1;
+        const sc = 1 + 0.035 * (focus ? P(t, k.at + 0.4, 0.4) : 0);
+        r[`s${i}`].style.transform += ` scale(${sc.toFixed(4)})`;
+      });
+      enter(r.a0, t, S2 - 0.3, { dx: -16, dy: 0 });
+      enter(r.a1, t, S3 - 0.3, { dx: -16, dy: 0 });
+      pop(r.warn, t, S4 + 0.3, {});
     };
   },
 };
@@ -824,4 +929,4 @@ const outro = {
   },
 };
 
-export const scenes = [intro, basic, conditions, both, concept66, stairsScene, example, qa1, qa2, qa3, qa4, key, summary, outro];
+export const scenes = [intro, basic, conditions, both, concept66, stairsScene, example, table, qa1, qa2, qa3, qa4, steps, summary, outro];

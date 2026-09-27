@@ -136,7 +136,8 @@ const PALETTES = {
   1: ['#CDEFE4', '#DAE7FF', '#FFE1D3'],
   2: ['#FFE6B3', '#FFD9C9', '#D7F1E8'],
   3: ['#FFDCD2', '#FFEBC4', '#E4E4FF'],
-  4: ['#D2F0E6', '#FFE9BF', '#DCE8FF'],
+  4: ['#DCE8FF', '#D2F0E6', '#FFE9BF'],
+  5: ['#E6E1FF', '#DAE7FF', '#FFE1D3'],
 };
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 const mix = (a, b, p) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(lerp(v, B[i], p))).join(',')})`; };
@@ -206,9 +207,9 @@ function updateBackground(bg, t, pal) {
 // ---------------------------------------------------------------- 자막
 const HL = /(6\+6|고용24|\d[\d,]*(?:천만 원|만 원|개월|년|월|일|%|세|학년|번|분|주)?)/g;
 const escapeHtml = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-const highlight = (s) => escapeHtml(s).replace(HL, '<b>$1</b>');
+export const highlight = (s) => escapeHtml(s).replace(HL, '<b>$1</b>');
 
-function buildCaptions(timeline) {
+export function buildCaptions(timeline) {
   const chunks = timeline.lines.flatMap((l) => l.chunks.map((c) => ({ ...c })));
   for (let i = 0; i < chunks.length; i++) {
     const next = chunks[i + 1];

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "short1-self-employed",
+    "scene": "qa1",
+    "fromLine": "a1q",
+    "fromChunk": 1,
+    "n": 1,
+    "sys": "ext",
+    "title": "배우자가 자영업자·<br>전업주부라면?",
+    "answerLine": "a1a"
+  },
+  {
+    "id": "short2-apply-early",
+    "scene": "qa2",
+    "fromLine": "a2q",
+    "fromChunk": 1,
+    "n": 2,
+    "sys": "ext",
+    "title": "배우자 3개월 채우기 전<br>미리 신청 가능?",
+    "answerLine": "a2a"
+  },
+  {
+    "id": "short3-450",
+    "scene": "qa3",
+    "fromLine": "a3q",
+    "fromChunk": 1,
+    "n": 3,
+    "sys": "six",
+    "title": "6+6이면 누구나<br>월 450만 원?",
+    "answerLine": "a3a"
+  },
+  {
+    "id": "short4-different-months",
+    "scene": "qa4",
+    "fromLine": "a4q",
+    "fromChunk": 1,
+    "n": 4,
+    "sys": "six",
+    "title": "엄마 6개월·아빠 3개월,<br>특례는 어떻게?",
+    "answerLine": "a4a"
+  }
+]

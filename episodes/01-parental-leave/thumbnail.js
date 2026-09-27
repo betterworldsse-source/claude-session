@@ -33,8 +33,8 @@ export function buildThumbnail(root) {
     <div style="font-size:92px;font-weight:920;letter-spacing:-0.04em;color:#FFC94D;line-height:1.05">최대 3년</div>
     <div class="abs" style="left:190px;bottom:-26px;width:0;height:0;border-left:26px solid transparent;border-right:26px solid transparent;border-top:30px solid #1F2A37"></div>
   </div>
-  <div class="abs col center" style="left:1500px;top:884px;width:380px;height:150px;border-radius:40px;background:linear-gradient(135deg,#FFC94D,#F5A524);color:#1F2A37;box-shadow:0 16px 36px rgba(245,165,36,0.35);transform:rotate(-4deg)">
-    <div style="font-size:34px;font-weight:800">첫 6개월 급여</div>
-    <div style="font-size:64px;font-weight:920;letter-spacing:-0.04em">최대 100%</div>
+  <div class="abs col center" style="left:1150px;top:352px;width:600px;height:164px;border-radius:40px;background:linear-gradient(135deg,#FFC94D,#F5A524);color:#1F2A37;box-shadow:0 16px 36px rgba(245,165,36,0.35);transform:rotate(-4deg)">
+    <div style="font-size:34px;font-weight:800">6+6 첫 6개월 급여</div>
+    <div style="font-size:66px;font-weight:920;letter-spacing:-0.045em;line-height:1.1">부부 최대 4,000만 원</div>
   </div>`;
 }

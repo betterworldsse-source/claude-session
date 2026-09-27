@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>Shorts Stage</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* 세로 쇼츠(1080×1920): 질문(처음엔 가운데 크게 → 답이 나오면 위로) · 답 장면(16:9에서 y 320~910 구간만) · 큰 자막 */
+    html, body { width: 1080px; height: 1920px; }
+    #frame { position: absolute; inset: 0; overflow: hidden;
+      background: radial-gradient(closest-side, rgba(255, 196, 178, 0.55), rgba(255, 196, 178, 0)) -260px -240px / 1100px 1100px no-repeat,
+                  radial-gradient(closest-side, rgba(205, 239, 228, 0.7), rgba(205, 239, 228, 0)) 380px 1180px / 1000px 1000px no-repeat,
+                  var(--bg); }
+    #top { position: absolute; left: 0; top: 0; width: 1080px; display: flex; flex-direction: column; align-items: center; transform-origin: 50% 0; }
+    #chips { display: flex; gap: 14px; }
+    #chips .chip { height: 60px; font-size: 30px; padding: 0 24px; }
+    #title { margin-top: 34px; text-align: center; font-size: 90px; line-height: 1.18; white-space: nowrap; }
+    #win { position: absolute; left: 0; top: 700px; width: 1080px; height: 375px; overflow: hidden;
+      box-shadow: 0 24px 60px rgba(31, 42, 55, 0.16); }
+    /* 1080 / 1700 = 0.6353 배율로 무대의 x 110~1810, y 320~910 구간을 보여 줌 */
+    #stage { inset: auto; left: 0; top: 0; width: 1920px; height: 1080px; transform: translate(-69.88px, -203.29px) scale(0.635294); transform-origin: 0 0; }
+    #stage #caption, #stage #chip-part, #stage #progress, #stage #stamp { display: none !important; }
+    #asof { position: absolute; left: 0; top: 1092px; width: 1040px; text-align: right; font-size: 24px; font-weight: 700; color: var(--ink-3); }
+    #bigcap { position: absolute; left: 90px; width: 900px; top: 1160px; display: flex; justify-content: center; }
+    #cap { padding: 20px 36px 22px; border-radius: 26px; background: rgba(24, 31, 43, 0.9); color: #fff;
+      font-size: 54px; font-weight: 720; line-height: 1.32; letter-spacing: -0.03em; text-align: center; white-space: normal;
+      box-shadow: 0 14px 34px rgba(20, 25, 35, 0.2); }
+    #cap b { color: #FFD36E; font-weight: 800; }
+  </style>
+</head>
+<body>
+  <div id="frame">
+    <div id="top"><div id="chips"></div><div id="title" class="disp"></div></div>
+    <div id="win"><div id="stage"></div></div>
+    <div id="asof"></div>
+    <div id="bigcap"><div id="cap"></div></div>
+  </div>
+  <script type="module">
+    import { start, buildCaptions, highlight, icon, P, lerp, ease, tf } from './engine.js';
+    const params = new URLSearchParams(location.search);
+    const ep = params.get('ep');
+    const i = +params.get('i');
+    const timeline = await (await fetch(`../../build/${ep}/timeline.json`)).json();
+    const shorts = await (await fetch(`../../episodes/${ep}/shorts.json`)).json();
+    const mod = await import(`../../episodes/${ep}/scenes.js`);
+    const sh = shorts[i];
+    const sys = { ext: ['6개월 연장 제도', 'mint', 'calendar-plus'], six: ['6+6 부모육아휴직제', 'gold', 'coins'] }[sh.sys];
+    document.getElementById('chips').innerHTML =
+      `<div class="chip" style="border:3px solid var(--red);color:var(--red);background:rgba(255,255,255,0.8)">${icon('circle-help', { size: 32, stroke: 2.4 })}헷갈리는 포인트 ${sh.n}</div>` +
+      `<div class="chip ${sys[1]}">${icon(sys[2], { size: 32 })}${sys[0]}</div>`;
+    document.getElementById('title').innerHTML = sh.title;
+    document.getElementById('asof').textContent = `${mod.asOf} · 고용노동부 자료`;
+    await start({ timeline, scenes: mod.scenes, chapters: mod.chapters, asOf: mod.asOf });
+    const A = timeline.lines.find((l) => l.id === sh.answerLine).start;
+    const top = document.getElementById('top'), win = document.getElementById('win'), asof = document.getElementById('asof');
+    const caps = buildCaptions(timeline);
+    const capEl = document.getElementById('cap');
+    const base = window.renderFrame;
+    let last;
+    window.renderFrame = (t) => {
+      base(t);
+      // 질문 단계: 제목을 가운데 크게 → 답이 시작되면 위로 올리고 답 장면을 보여 줌
+      const p = P(t, A - 0.45, 0.55, ease.inOutCubic);
+      tf(top, { y: lerp(620, 250, p), s: lerp(1.12, 1, p) });
+      tf(win, { y: lerp(70, 0, p), o: p });
+      tf(asof, { o: p });
+      const c = caps.find((x) => t >= x.start && t < x.show) || null;
+      if (c !== last) {
+        capEl.innerHTML = c ? highlight(c.text) : '';
+        capEl.style.visibility = c ? 'visible' : 'hidden';
+        last = c;
+      }
+    };
+    window.__shortsReady = true;
+  </script>
+</body>
+</html>

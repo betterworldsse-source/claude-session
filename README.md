@@ -5,11 +5,12 @@
 
 ## 1화: 육아휴직 6개월 연장 제도 & 6+6 부모육아휴직제 (2026년 9월 기준)
 
-구성: 오늘 소개할 제도 두 가지 → ① 6개월 연장 제도(성립 조건) → ② 6+6 부모육아휴직제(어떤 제도인지) → ③ 헷갈리는 포인트 4가지 → 3줄 요약. 내레이션은 '~입니다' 체입니다.
+구성: 훅(부부 최대 3년·4,000만 원) → 오늘 소개할 제도 두 가지 → ① 6개월 연장 제도(성립 조건) → ② 6+6 부모육아휴직제(어떤 제도인지·월급별 표) → ③ 헷갈리는 포인트 4가지 → ④ 신청 방법 3단계 → 3줄 요약. 내레이션은 '~입니다' 체입니다.
 
 | 파일 | 내용 |
 |---|---|
 | `episodes/01-parental-leave/output/01-parental-leave_1080p.mp4` | 완성 영상 (1920×1080, 30fps, 약 3분 46초, -14 LUFS) |
+| `episodes/01-parental-leave/output/shorts/*.mp4` | 쇼츠 4편 (1080×1920, 헷갈리는 포인트별) · 구성은 `shorts.json` |
 | `episodes/01-parental-leave/thumbnail.png` | 유튜브 썸네일 (1280×720) |
 | `episodes/01-parental-leave/subtitles.srt` | 유튜브 자막 업로드용 SRT |
 | `episodes/01-parental-leave/youtube.md` | 제목 후보 · 설명란(챕터 포함) · 태그 · 고정 댓글 |
@@ -41,6 +42,7 @@ node engine/render.mjs preview 01-parental-leave 12 95 180   # 특정 시점 스
 node engine/render.mjs video 01-parental-leave --workers 4   # 영상 렌더
 python3 engine/audio/mix.py 01-parental-leave                # 믹스 + 합치기 → build/…/final.mp4
 node engine/render.mjs thumb 01-parental-leave               # 썸네일
+node engine/render.mjs shorts 01-parental-leave              # 세로 쇼츠 (mix.wav 필요)
 python3 engine/docs.py 01-parental-leave                     # 대본 문서 · 유튜브 챕터
 ```
 
