@@ -15,5 +15,10 @@
 - `voice.json`의 `voiceId`가 비어 있으면 아직 복제 전입니다 → 사용자의 샘플(1~2분)로 `engine/audio/eleven_clone.py` 실행.
 - 직접 녹음한 문장은 `episodes/<ep>/overrides/<문장id>.wav`가 항상 우선합니다.
 
+## 옵시디언 (사용자의 PKM)
+- 녹음 대본·가이드는 옵시디언 볼트에도 올립니다: Google Drive `내 드라이브/500_PKM 세팅/Youtube/영상대본` (PC 경로 `G:\내 드라이브\500_PKM 세팅\Youtube\영상대본`). 볼트 루트는 `Youtube` 폴더입니다.
+- `python3 engine/docs.py <ep>` 가 `build/<ep>/obsidian/` 에 노트(`<번호> <shortTitle> - 녹음 대본.md`, `녹음 가이드.md`)를 만듭니다. 드라이브 커넥터로 **.md 그대로(Google 문서 변환 없이)** 올리고, 같은 이름이 있으면 새로 만들지 말고 사용자에게 확인합니다.
+- 목소리 샘플은 드라이브 `Youtube/목소리 복제` 폴더에 올라옵니다.
+
 ## 전달
 - 1080p 최종본은 `episodes/<ep>/output/`에 커밋, 채팅에는 720p 미리보기(30MB 이하)를 보냅니다. `build/`는 커밋하지 않습니다.
