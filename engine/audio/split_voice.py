@@ -1,11 +1,12 @@
 """한 번에 녹음한 내레이션 파일을 문장별로 잘라 overrides/<문장id>.wav 로 저장합니다.
 
 사용법:
-    python3 engine/audio/split_voice.py 01-parental-leave 내녹음.m4a
+    python3 engine/audio/split_voice.py 01-parental-leave 내녹음.m4a [12.m4a 18.m4a …] [--out 폴더]
 
-녹음 방법: script.json 의 문장을 순서대로 읽되, 문장과 문장 사이에 1~2초 쉬어 주세요.
-문장 안의 짧은 쉼(쉼표 등)보다 문장 사이의 쉼이 길기만 하면, 가장 긴 쉼 (문장 수 - 1)개를
-경계로 삼아 자동으로 나눕니다. 이후 `bash engine/build.sh <ep>` 를 실행하면 영상 타이밍이
+녹음 방법: recording.md 의 번호 순서대로 읽되, 번호가 바뀔 때마다 2~3초 쉬어 주세요.
+같은 번호 안의 짧은 쉼(쉼표·마침표)보다 번호 사이의 쉼이 길기만 하면, 가장 긴 쉼 (문장 수 - 1)개를
+경계로 삼아 자동으로 나눕니다. `12.m4a` 처럼 번호를 이름으로 붙인 파일을 함께 주면 그 번호만
+따로 녹음한 것으로 교체합니다. 이후 `bash engine/build.sh <ep>` 를 실행하면 영상 타이밍이
 녹음 길이에 맞춰 다시 계산됩니다.
 """
 
@@ -64,7 +65,7 @@ def voiced_regions(x: np.ndarray, hop_s: float = 0.01):
     return regions
 
 
-def main(ep: str, rec: str) -> None:
+def main(ep: str, rec: str, fixes: list, out_dir: str = "") -> None:
     ep_dir = ROOT / "episodes" / ep
     script = json.loads((ep_dir / "script.json").read_text(encoding="utf-8"))
     ids = [l["id"] for s in script["scenes"] for l in s.get("lines", [])]
@@ -89,8 +90,8 @@ def main(ep: str, rec: str) -> None:
         bounds.append((regions[start][0], regions[k][1]))
         start = k + 1
 
-    out = ep_dir / "overrides"
-    out.mkdir(exist_ok=True)
+    out = Path(out_dir) if out_dir else ep_dir / "overrides"
+    out.mkdir(parents=True, exist_ok=True)
     pad = 0.06
     for (a, b), lid, text in zip(bounds, ids, texts):
         seg = x[max(0, int((a - pad) * SR)) : int((b + pad) * SR)]
@@ -99,10 +100,35 @@ def main(ep: str, rec: str) -> None:
         seg[-f:] *= np.linspace(1, 0, f)
         sf.write(out / f"{lid}.wav", seg, SR, subtype="PCM_24")
         print(f"  {lid:>3} {b - a:5.2f}s  {text}")
+
+    # 따로 다시 녹음한 번호(예: 12.m4a)로 교체
+    for fix in fixes:
+        fp = Path(fix)
+        if not fp.stem.isdigit() or not 1 <= int(fp.stem) <= n:
+            print(f"⚠️  {fp.name}: 파일 이름이 1~{n} 사이 번호가 아니라 건너뜁니다.")
+            continue
+        k = int(fp.stem) - 1
+        y = load_clean(fp)
+        reg = voiced_regions(y)
+        if not reg:
+            print(f"⚠️  {fp.name}: 목소리를 찾지 못해 건너뜁니다.")
+            continue
+        seg = y[max(0, int((reg[0][0] - pad) * SR)) : int((reg[-1][1] + pad) * SR)]
+        f = int(0.01 * SR)
+        seg[:f] *= np.linspace(0, 1, f)
+        seg[-f:] *= np.linspace(1, 0, f)
+        sf.write(out / f"{ids[k]}.wav", seg, SR, subtype="PCM_24")
+        print(f"  {ids[k]:>3} ← {fp.name} 로 교체 ({len(seg) / SR:.2f}s)  {texts[k]}")
     print(f"→ {out} 에 {n}개 저장. 이제 `bash engine/build.sh {ep}` 로 다시 빌드하세요.")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        sys.exit("사용법: python3 engine/audio/split_voice.py <episode> <녹음파일>")
-    main(sys.argv[1], sys.argv[2])
+    args = sys.argv[1:]
+    out_dir = ""
+    if "--out" in args:
+        i = args.index("--out")
+        out_dir = args[i + 1]
+        del args[i : i + 2]
+    if len(args) < 2:
+        sys.exit("사용법: python3 engine/audio/split_voice.py <episode> <녹음파일> [번호.m4a …] [--out 폴더]")
+    main(args[0], args[1], args[2:], out_dir)
