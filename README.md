@@ -54,9 +54,11 @@ python3 engine/docs.py 01-parental-leave                     # 대본 문서 · 
 ### A. 일레븐랩스 복제 목소리 (채널 기본, 한 번 만들면 계속 사용)
 
 1. 일레븐랩스 Starter 이상 요금제에 가입합니다(인스턴트 보이스 클로닝).
-2. 작업 환경 설정(클라우드 환경 메뉴 → Edit)에서 두 가지를 추가하고 **새 세션**을 엽니다.
-   - 네트워크 접근: `api.elevenlabs.io` 허용
-   - 환경 변수: `ELEVENLABS_API_KEY` (키는 채팅에 붙여 넣지 않습니다)
+2. claude.ai/code 입력창 위의 구름 아이콘(환경 이름) → 환경에 마우스를 올려 톱니바퀴 → **API credentials → Add credential**
+   - Name `ElevenLabs` · Allowed websites `api.elevenlabs.io` · Custom headers: 이름 `xi-api-key`, Prefix 비우기, Value에 API 키 → **Connect**
+   - 이 방법이면 네트워크 설정을 바꾸지 않아도 되고, 키가 세션 안에 들어오지 않습니다(프록시가 요청에 붙임).
+   - API credentials 칸이 없는 요금제라면: Environment variables에 `ELEVENLABS_API_KEY=키`, Network access를 Custom으로 바꿔 `api.elevenlabs.io` 추가(기본 목록 포함 체크).
+   - 설정은 **새 세션**부터 적용됩니다. 새 세션에서 `python3 engine/audio/eleven_clone.py --check` 로 연결을 확인합니다.
 3. 1~2분 분량의 깨끗한 샘플로 목소리를 만듭니다. 목소리 ID가 `voice.json`에 저장되고, 에피소드가 채널 목소리를 쓰도록 바뀝니다.
    ```bash
    python3 engine/audio/eleven_clone.py 샘플.m4a --name "채널 목소리" --use-in 01-parental-leave

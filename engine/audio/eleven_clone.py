@@ -4,11 +4,14 @@
     python3 engine/audio/eleven_clone.py 샘플.m4a [샘플2.m4a …] [--name "채널 목소리"] [--use-in 01-parental-leave]
     python3 engine/audio/eleven_clone.py --find "채널 목소리" [--use-in 01-parental-leave]
       (일레븐랩스 사이트에서 직접 복제한 목소리를 이름으로 찾아 voice.json 에 저장)
+    python3 engine/audio/eleven_clone.py --check
+      (연결·인증·voice.json 의 목소리 ID 확인)
 
 - 샘플은 잡음·울림 없이 1~2분이면 충분합니다(3분 넘게는 효과가 거의 없습니다).
 - 만든 목소리는 일레븐랩스 계정의 My Voices 에 남아, 다음 에피소드부터 녹음 없이 계속 씁니다.
 - --use-in 을 주면 그 에피소드의 script.json 이 채널 목소리({"use": "channel"})를 쓰도록 바꿉니다.
-필요: 환경 변수 ELEVENLABS_API_KEY, 네트워크에서 api.elevenlabs.io 허용.
+인증: 작업 환경의 API 자격 증명(api.elevenlabs.io, 헤더 xi-api-key)이 있으면 키 없이 동작합니다.
+      없으면 환경 변수 ELEVENLABS_API_KEY 와 네트워크 허용(api.elevenlabs.io)이 필요합니다.
 """
 
 import json
@@ -23,6 +26,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 BASE = os.environ.get("ELEVENLABS_BASE_URL", "https://api.elevenlabs.io")
+SETUP = ("설정: 작업 환경 편집 → API credentials → Add credential "
+         "(Allowed websites: api.elevenlabs.io, 헤더 이름 xi-api-key, 접두사 없음, 값: API 키). "
+         "또는 환경 변수 ELEVENLABS_API_KEY + 네트워크 허용(api.elevenlabs.io). 설정은 새 세션부터 적용됩니다.")
 
 
 def to_mp3(src: Path, dst: Path) -> None:
@@ -44,11 +50,15 @@ def multipart(fields: dict, files: list) -> tuple:
 
 
 def main(argv: list) -> None:
-    name, use_in, config, find = "채널 목소리", "", ROOT / "voice.json", ""
+    name, use_in, config, find, check = "채널 목소리", "", ROOT / "voice.json", "", False
     samples = []
     i = 0
     while i < len(argv):
         a = argv[i]
+        if a == "--check":
+            check = True
+            i += 1
+            continue
         if a in ("--name", "--use-in", "--config", "--find"):
             val = argv[i + 1]
             if a == "--name":
@@ -63,11 +73,17 @@ def main(argv: list) -> None:
             continue
         samples.append(Path(a))
         i += 1
-    if not samples and not find:
+    if not samples and not find and not check:
         sys.exit(__doc__)
-    key = os.environ.get("ELEVENLABS_API_KEY", "")
-    if not key:
-        sys.exit("ELEVENLABS_API_KEY 환경 변수가 없습니다. 작업 환경 설정에서 등록한 뒤 새 세션에서 다시 실행하세요.")
+    key = os.environ.get("ELEVENLABS_API_KEY", "")  # 없으면 작업 환경의 API 자격 증명이 키를 붙입니다
+
+    if check:
+        vid = json.loads(config.read_text(encoding="utf-8")).get("voiceId", "")
+        if not vid:
+            sys.exit("voice.json 에 목소리 ID가 없습니다.")
+        v = call(key, f"/v1/voices/{vid}")
+        print(f"연결 OK · 목소리: {v.get('name')} ({v.get('category')}) · ID {vid}")
+        return
 
     if find:
         vid, name = find_voice(key, find)
@@ -81,12 +97,7 @@ def main(argv: list) -> None:
             to_mp3(sp, dst)
             mp3s.append(dst)
         body, ctype = multipart({"name": name, "description": "YouTube narration voice (instant clone)"}, mp3s)
-        req = urllib.request.Request(f"{BASE}/v1/voices/add", data=body, method="POST",
-                                     headers={"xi-api-key": key, "Content-Type": ctype, "Accept": "application/json"})
-        try:
-            res = json.loads(urllib.request.urlopen(req, timeout=300).read())
-        except urllib.error.HTTPError as exc:
-            sys.exit(f"일레븐랩스 오류 {exc.code}: {exc.read()[:400].decode('utf-8', 'replace')}")
+        res = call(key, "/v1/voices/add", body, ctype)
     vid = res.get("voice_id")
     if not vid:
         sys.exit(f"목소리 ID를 받지 못했습니다: {res}")
@@ -97,13 +108,26 @@ def main(argv: list) -> None:
     save(config, name, vid, use_in)
 
 
+def call(key: str, path: str, body: bytes = None, ctype: str = "") -> dict:
+    """일레븐랩스 API 호출. 키가 없으면 헤더 없이 보내 작업 환경의 API 자격 증명이 붙도록 합니다."""
+    headers = {"Accept": "application/json"}
+    if key:
+        headers["xi-api-key"] = key
+    if ctype:
+        headers["Content-Type"] = ctype
+    req = urllib.request.Request(f"{BASE}{path}", data=body, method="POST" if body else "GET", headers=headers)
+    try:
+        return json.loads(urllib.request.urlopen(req, timeout=300).read())
+    except urllib.error.HTTPError as exc:
+        hint = f"\n{SETUP}" if exc.code in (401, 403) else ""
+        sys.exit(f"일레븐랩스 오류 {exc.code}: {exc.read()[:400].decode('utf-8', 'replace')}{hint}")
+    except urllib.error.URLError as exc:
+        sys.exit(f"api.elevenlabs.io 에 연결하지 못했습니다 ({exc.reason}).\n{SETUP}")
+
+
 def find_voice(key: str, query: str) -> tuple:
     """내 목소리 목록(GET /v1/voices)에서 이름으로 찾습니다. 정확히 같은 이름을 먼저, 없으면 포함하는 이름을 찾습니다."""
-    req = urllib.request.Request(f"{BASE}/v1/voices", headers={"xi-api-key": key, "Accept": "application/json"})
-    try:
-        voices = json.loads(urllib.request.urlopen(req, timeout=60).read()).get("voices", [])
-    except urllib.error.HTTPError as exc:
-        sys.exit(f"일레븐랩스 오류 {exc.code}: {exc.read()[:400].decode('utf-8', 'replace')}")
+    voices = call(key, "/v1/voices").get("voices", [])
     mine = [v for v in voices if v.get("category") in ("cloned", "professional", "generated")] or voices
     q = query.strip().lower()
     hits = [v for v in mine if v.get("name", "").strip().lower() == q] or [v for v in mine if q in v.get("name", "").lower()]

@@ -62,15 +62,16 @@ def fetch_tts(text: str, lang: str, cache_dir: Path) -> Path:
 
 
 ELEVEN_BASE = os.environ.get("ELEVENLABS_BASE_URL", "https://api.elevenlabs.io")
+ELEVEN_SETUP = ("설정: 작업 환경 편집 → API credentials → Add credential "
+                "(Allowed websites: api.elevenlabs.io, 헤더 이름 xi-api-key, 접두사 없음, 값: API 키). "
+                "또는 환경 변수 ELEVENLABS_API_KEY + 네트워크 허용(api.elevenlabs.io). 설정은 새 세션부터 적용됩니다.")
 ELEVEN_SETTINGS = {"stability": 0.5, "similarity_boost": 0.8, "style": 0.0, "use_speaker_boost": True, "speed": 1.0}
 
 
 def fetch_eleven(text: str, voice: dict, cache_dir: Path, prev_text: str = "", next_text: str = "") -> Path:
     """일레븐랩스 text-to-speech 로 한 문장을 만듭니다. 앞뒤 문장을 함께 넘겨 억양이 이어지게 합니다."""
-    key = os.environ.get("ELEVENLABS_API_KEY", "")
+    key = os.environ.get("ELEVENLABS_API_KEY", "")  # 없으면 작업 환경의 API 자격 증명이 요청에 키를 붙입니다
     vid = voice.get("voiceId") or os.environ.get("ELEVENLABS_VOICE_ID", "")
-    if not key:
-        sys.exit("ELEVENLABS_API_KEY 환경 변수가 없습니다. 작업 환경 설정에서 등록한 뒤 새 세션에서 다시 실행하세요.")
     if not vid:
         sys.exit("복제 목소리 ID가 없습니다. engine/audio/eleven_clone.py 로 목소리를 만들면 voice.json 에 채워집니다.")
     body = {"text": text, "model_id": voice.get("model", "eleven_multilingual_v2"),
@@ -90,8 +91,10 @@ def fetch_eleven(text: str, voice: dict, cache_dir: Path, prev_text: str = "", n
     url = f"{ELEVEN_BASE}/v1/text-to-speech/{vid}?output_format={fmt}"
     data = json.dumps(body, ensure_ascii=False).encode("utf-8")
     for attempt in range(5):
-        req = urllib.request.Request(url, data=data, method="POST", headers={
-            "xi-api-key": key, "Content-Type": "application/json", "Accept": "audio/mpeg"})
+        headers = {"Content-Type": "application/json", "Accept": "audio/mpeg"}
+        if key:
+            headers["xi-api-key"] = key
+        req = urllib.request.Request(url, data=data, method="POST", headers=headers)
         try:
             audio = urllib.request.urlopen(req, timeout=180).read()
             if len(audio) < 1000:
@@ -100,6 +103,8 @@ def fetch_eleven(text: str, voice: dict, cache_dir: Path, prev_text: str = "", n
             return out
         except urllib.error.HTTPError as exc:
             detail = exc.read()[:400].decode("utf-8", "replace")
+            if exc.code in (401, 403):
+                sys.exit(f"일레븐랩스 인증 실패 (HTTP {exc.code}): {detail}\n{ELEVEN_SETUP}")
             if exc.code != 429 and exc.code < 500:
                 sys.exit(f"일레븐랩스 오류 {exc.code}: {detail}")
             wait = 2 ** (attempt + 1)
@@ -109,7 +114,7 @@ def fetch_eleven(text: str, voice: dict, cache_dir: Path, prev_text: str = "", n
             wait = 2 ** (attempt + 1)
             print(f"  일레븐랩스 재시도 {attempt + 1}/5 ({exc}); {wait}s 대기", file=sys.stderr)
             time.sleep(wait)
-    raise RuntimeError(f"일레븐랩스 음성 생성 실패: {text}")
+    sys.exit(f"api.elevenlabs.io 에 연결하지 못했습니다.\n{ELEVEN_SETUP}")
 
 
 def resolve_voice(voice: dict) -> dict:

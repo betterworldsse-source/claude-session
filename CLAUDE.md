@@ -11,7 +11,9 @@
 
 ## 목소리
 - 채널 목소리는 일레븐랩스 복제 목소리: `voice.json`(목소리 ID·모델·설정). 에피소드 `script.json`에 `"voice": {"use": "channel"}`.
-- 필요: 환경 변수 `ELEVENLABS_API_KEY`, 네트워크 `api.elevenlabs.io` 허용. 키를 채팅에 붙여 넣으라고 요청하지 않습니다.
+- 인증은 작업 환경의 **API credentials**(Pro·Max)가 기본입니다: Allowed websites `api.elevenlabs.io`, 헤더 이름 `xi-api-key`, 접두사 없음. 이 경우 세션에 `ELEVENLABS_API_KEY` 환경 변수가 **없는 게 정상**이고(프록시가 요청에 키를 붙임), 네트워크 허용도 따로 필요 없습니다. 대안: 환경 변수 `ELEVENLABS_API_KEY` + 네트워크 Custom에 `api.elevenlabs.io`(기본 목록 포함 체크).
+- 작업 전에 `python3 engine/audio/eleven_clone.py --check` 로 연결·인증·목소리 ID를 먼저 확인합니다. 환경 변수가 없다는 이유만으로 막혔다고 판단하지 않습니다.
+- 키를 채팅에 붙여 넣으라고 요청하지 않습니다. 채팅에 올라온 키는 쓰지 말고 폐기·재발급을 권합니다.
 - `voice.json`의 `voiceId`가 비어 있으면 아직 복제 전입니다. 사용자가 일레븐랩스 사이트에서 직접 복제(Instant Voice Clone)하고 목소리 이름을 알려 주면 `python3 engine/audio/eleven_clone.py --find "<이름>" --use-in <ep>` 로 저장합니다(샘플 파일이 저장소에 있으면 `eleven_clone.py <샘플>`로 직접 만들 수도 있음).
 - 직접 녹음한 문장은 `episodes/<ep>/overrides/<문장id>.wav`가 항상 우선합니다.
 
