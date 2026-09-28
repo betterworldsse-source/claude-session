@@ -2,7 +2,7 @@
 """채널 목소리 일관성 검사: 문장마다 '사용자 원본 샘플과 같은 사람 목소리인지'를 점수로 봅니다.
 
   python3 engine/audio/voice_check.py 01-parental-leave            # 점수표
-  python3 engine/audio/voice_check.py 01-parental-leave --retake 4  # 튀는 문장을 seed 1~4로 다시 만들어 가장 비슷한 테이크를 script.json에 저장
+  python3 engine/audio/voice_check.py 01-parental-leave --retake 4  # 튀거나 단조로운 문장을 seed 1~4로 다시 만들어 가장 나은 테이크를 script.json에 저장
 
 - 기준 목소리는 일레븐랩스 목소리에 올라가 있는 원본 샘플(voice.json 의 voiceId)을 받아 .cache/voice_ref.mp3 로 둡니다.
 - 점수는 화자 임베딩(resemblyzer) 코사인 유사도입니다. 짧은 문장은 같은 사람이어도 점수가 낮게 나오므로,
@@ -65,11 +65,24 @@ def score_wav(wav: np.ndarray, ref) -> float:
     return float(ENC.embed_utterance(wav) @ ref)
 
 
+def pitch_var(wav: np.ndarray) -> float:
+    """억양 폭: 목소리 높낮이의 표준편차(반음). 작을수록 단조롭게(기계처럼) 들립니다."""
+    f0, voiced, _ = librosa.pyin(wav, fmin=70, fmax=350, sr=SR, frame_length=1024, hop_length=160)
+    f = f0[voiced & ~np.isnan(f0)]
+    return float(np.std(12 * np.log2(f / np.median(f)))) if len(f) > 10 else 0.0
+
+
+def badness(gap: float, pv: float, flat: float) -> float:
+    """고를 때 쓰는 점수: 목소리가 원본과 멀수록, 억양이 단조로울수록 나쁨"""
+    return gap + 0.03 * max(0.0, flat + 0.4 - pv)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("episode")
     ap.add_argument("--retake", type=int, default=0, help="튀는 문장마다 시도할 seed 개수")
     ap.add_argument("--gap", type=float, default=0.065, help="기대값보다 이만큼 낮으면 튀는 문장으로 봄")
+    ap.add_argument("--flat", type=float, default=3.4, help="억양 폭(반음)이 이보다 작으면 단조로운 문장으로 봄")
     args = ap.parse_args()
 
     ep = ROOT / "episodes" / args.episode
@@ -87,12 +100,13 @@ def main() -> None:
             wav = load(lines_dir / f"{line['id']}.wav")
             sec = len(wav) / SR
             s = score_wav(wav, ref)
-            rows.append({"line": line, "sec": sec, "score": s, "gap": expected(curve, sec) - s})
+            rows.append({"line": line, "sec": sec, "score": s, "gap": expected(curve, sec) - s, "pv": pitch_var(wav)})
     gaps = np.array([r["gap"] for r in rows])
-    print(f"문장 {len(rows)}개 · 평균 점수 {np.mean([r['score'] for r in rows]):.3f} · 기대값과의 차이 평균 {gaps.mean():.3f} 최대 {gaps.max():.3f}")
+    pvs = np.array([r["pv"] for r in rows])
+    print(f"문장 {len(rows)}개 · 평균 점수 {np.mean([r['score'] for r in rows]):.3f} · 기대값과의 차이 평균 {gaps.mean():.3f} 최대 {gaps.max():.3f} · 억양 폭 평균 {pvs.mean():.2f} 최저 {pvs.min():.2f}")
     for r in rows:
-        mark = "⚠" if r["gap"] > args.gap else " "
-        print(f" {mark} {r['line']['id']:>4} {r['sec']:4.1f}s 점수 {r['score']:.3f} 차이 {r['gap']:+.3f}")
+        mark = ("⚠" if r["gap"] > args.gap else " ") + ("♪" if r["pv"] < args.flat else " ")
+        print(f" {mark} {r['line']['id']:>4} {r['sec']:4.1f}s 점수 {r['score']:.3f} 차이 {r['gap']:+.3f} 억양 {r['pv']:.2f}")
 
     if not args.retake:
         return
@@ -104,13 +118,13 @@ def main() -> None:
     cache = ROOT / ".cache" / "tts"
     changed = 0
     for r in rows:
-        if r["gap"] <= args.gap:
+        if r["gap"] <= args.gap and r["pv"] >= args.flat:
             continue
         line = r["line"]
         i = order.index(line["id"])
         prev_text = context[i - 1] if i > 0 else ""
         next_text = context[i + 1] if i + 1 < len(context) else ""
-        best = (r["gap"], line.get("seed"))
+        best = (badness(r["gap"], r["pv"], args.flat), line.get("seed"), r["gap"], r["pv"])
         for seed in range(1, args.retake + 1):
             if seed == line.get("seed"):
                 continue
@@ -118,13 +132,15 @@ def main() -> None:
             audio = tts.trim_silence(tts.decode(mp3, voice.get("tempo", 1.0)))
             wav = preprocess_wav(librosa.resample(audio, orig_sr=tts.SR, target_sr=SR))
             gap = expected(curve, len(wav) / SR) - score_wav(wav, ref)
-            print(f"   {line['id']:>4} seed {seed}: 차이 {gap:+.3f}")
-            if gap < best[0]:
-                best = (gap, seed)
+            pv = pitch_var(wav)
+            b = badness(gap, pv, args.flat)
+            print(f"   {line['id']:>4} seed {seed}: 차이 {gap:+.3f} 억양 {pv:.2f}")
+            if gap <= max(args.gap, r["gap"]) and b < best[0]:
+                best = (b, seed, gap, pv)
         if best[1] != line.get("seed"):
             line["seed"] = best[1]
             changed += 1
-            print(f"   → {line['id']} seed {best[1]} 사용 (차이 {r['gap']:+.3f} → {best[0]:+.3f})")
+            print(f"   → {line['id']} seed {best[1]} 사용 (차이 {r['gap']:+.3f} → {best[2]:+.3f}, 억양 {r['pv']:.2f} → {best[3]:.2f})")
     if changed:
         script_path.write_text(json.dumps(script, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"script.json 에 {changed}개 문장의 seed 를 저장했습니다. tts.py 를 다시 돌리면 반영됩니다.")
