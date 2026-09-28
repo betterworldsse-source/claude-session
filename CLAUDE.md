@@ -12,13 +12,13 @@
 ## 목소리
 - 채널 목소리는 일레븐랩스 복제 목소리: `voice.json`(목소리 ID·모델·설정). 에피소드 `script.json`에 `"voice": {"use": "channel"}`.
 - 필요: 환경 변수 `ELEVENLABS_API_KEY`, 네트워크 `api.elevenlabs.io` 허용. 키를 채팅에 붙여 넣으라고 요청하지 않습니다.
-- `voice.json`의 `voiceId`가 비어 있으면 아직 복제 전입니다 → 사용자의 샘플(1~2분)로 `engine/audio/eleven_clone.py` 실행.
+- `voice.json`의 `voiceId`가 비어 있으면 아직 복제 전입니다. 사용자가 일레븐랩스 사이트에서 직접 복제(Instant Voice Clone)하고 목소리 이름을 알려 주면 `python3 engine/audio/eleven_clone.py --find "<이름>" --use-in <ep>` 로 저장합니다(샘플 파일이 저장소에 있으면 `eleven_clone.py <샘플>`로 직접 만들 수도 있음).
 - 직접 녹음한 문장은 `episodes/<ep>/overrides/<문장id>.wav`가 항상 우선합니다.
 
 ## 옵시디언 (사용자의 PKM)
 - 녹음 대본·가이드는 옵시디언 볼트에도 올립니다: Google Drive `내 드라이브/500_PKM 세팅/Youtube/영상대본` (PC 경로 `G:\내 드라이브\500_PKM 세팅\Youtube\영상대본`). 볼트 루트는 `Youtube` 폴더입니다.
 - `python3 engine/docs.py <ep>` 가 `build/<ep>/obsidian/` 에 노트(`<번호> <shortTitle> - 녹음 대본.md`, `녹음 가이드.md`)를 만듭니다. 드라이브 커넥터로 **.md 그대로(Google 문서 변환 없이)** 올리고, 같은 이름이 있으면 새로 만들지 말고 사용자에게 확인합니다.
-- 목소리 샘플은 드라이브 `Youtube/목소리 복제` 폴더에 올라옵니다.
+- 드라이브 커넥터는 파일 내용을 대화 안에 글자로 옮기므로 **큰 음성·영상 파일은 받아올 수 없습니다**. 음성 파일이 필요하면 GitHub 작업 브랜치의 `episodes/<ep>/recordings/`에 올려 달라고 합니다.
 
 ## 전달
 - 1080p 최종본은 `episodes/<ep>/output/`에 커밋, 채팅에는 720p 미리보기(30MB 이하)를 보냅니다. `build/`는 커밋하지 않습니다.

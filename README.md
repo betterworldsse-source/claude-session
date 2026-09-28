@@ -62,7 +62,7 @@ python3 engine/docs.py 01-parental-leave                     # 대본 문서 · 
    python3 engine/audio/eleven_clone.py 샘플.m4a --name "채널 목소리" --use-in 01-parental-leave
    bash engine/build.sh 01-parental-leave
    ```
-   일레븐랩스 사이트에서 직접 만든 경우에는 `voice.json`의 `voiceId`만 채우고 `script.json`의 `"voice"`를 `{"use": "channel"}`로 바꿉니다.
+   일레븐랩스 사이트에서 직접 복제했다면 이름으로 찾아 저장합니다: `python3 engine/audio/eleven_clone.py --find "채널 목소리" --use-in 01-parental-leave`
 4. 새 에피소드는 `script.json`에 `"voice": {"use": "channel"}`만 넣으면 같은 목소리로 만들어집니다. 문장마다 앞뒤 문장을 함께 넘겨 억양을 잇고, 만든 음성은 `.cache/tts`에 저장돼 다시 빌드해도 과금되지 않습니다.
 5. 목소리 설정(모델 `eleven_multilingual_v2`, 안정성·유사도·속도)은 `voice.json`의 `settings`에서 조정합니다. 요금제를 해지하면 목소리는 계정에 남지만, 다시 구독하기 전까지는 쓸 수 없습니다.
 

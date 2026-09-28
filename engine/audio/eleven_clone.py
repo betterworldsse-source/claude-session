@@ -2,6 +2,8 @@
 
 사용법:
     python3 engine/audio/eleven_clone.py 샘플.m4a [샘플2.m4a …] [--name "채널 목소리"] [--use-in 01-parental-leave]
+    python3 engine/audio/eleven_clone.py --find "채널 목소리" [--use-in 01-parental-leave]
+      (일레븐랩스 사이트에서 직접 복제한 목소리를 이름으로 찾아 voice.json 에 저장)
 
 - 샘플은 잡음·울림 없이 1~2분이면 충분합니다(3분 넘게는 효과가 거의 없습니다).
 - 만든 목소리는 일레븐랩스 계정의 My Voices 에 남아, 다음 에피소드부터 녹음 없이 계속 씁니다.
@@ -42,28 +44,35 @@ def multipart(fields: dict, files: list) -> tuple:
 
 
 def main(argv: list) -> None:
-    name, use_in, config = "채널 목소리", "", ROOT / "voice.json"
+    name, use_in, config, find = "채널 목소리", "", ROOT / "voice.json", ""
     samples = []
     i = 0
     while i < len(argv):
         a = argv[i]
-        if a in ("--name", "--use-in", "--config"):
+        if a in ("--name", "--use-in", "--config", "--find"):
             val = argv[i + 1]
             if a == "--name":
                 name = val
             elif a == "--use-in":
                 use_in = val
+            elif a == "--find":
+                find = val
             else:
                 config = Path(val)
             i += 2
             continue
         samples.append(Path(a))
         i += 1
-    if not samples:
+    if not samples and not find:
         sys.exit(__doc__)
     key = os.environ.get("ELEVENLABS_API_KEY", "")
     if not key:
         sys.exit("ELEVENLABS_API_KEY 환경 변수가 없습니다. 작업 환경 설정에서 등록한 뒤 새 세션에서 다시 실행하세요.")
+
+    if find:
+        vid, name = find_voice(key, find)
+        save(config, name, vid, use_in)
+        return
 
     with tempfile.TemporaryDirectory() as tmp:
         mp3s = []
@@ -82,13 +91,33 @@ def main(argv: list) -> None:
     if not vid:
         sys.exit(f"목소리 ID를 받지 못했습니다: {res}")
 
+    print(f"복제 목소리 생성: {name} ({vid})")
+    if res.get("requires_verification"):
+        print("⚠️  일레븐랩스에서 목소리 확인(verification)을 요구합니다. 사이트의 My Voices 에서 확인해 주세요.")
+    save(config, name, vid, use_in)
+
+
+def find_voice(key: str, query: str) -> tuple:
+    """내 목소리 목록(GET /v1/voices)에서 이름으로 찾습니다. 정확히 같은 이름을 먼저, 없으면 포함하는 이름을 찾습니다."""
+    req = urllib.request.Request(f"{BASE}/v1/voices", headers={"xi-api-key": key, "Accept": "application/json"})
+    try:
+        voices = json.loads(urllib.request.urlopen(req, timeout=60).read()).get("voices", [])
+    except urllib.error.HTTPError as exc:
+        sys.exit(f"일레븐랩스 오류 {exc.code}: {exc.read()[:400].decode('utf-8', 'replace')}")
+    mine = [v for v in voices if v.get("category") in ("cloned", "professional", "generated")] or voices
+    q = query.strip().lower()
+    hits = [v for v in mine if v.get("name", "").strip().lower() == q] or [v for v in mine if q in v.get("name", "").lower()]
+    if len(hits) != 1:
+        names = ", ".join(f"{v.get('name')} ({v.get('category')})" for v in mine) or "없음"
+        sys.exit(f"'{query}' 이름의 목소리를 하나로 찾지 못했습니다 ({len(hits)}개). 내 목소리: {names}")
+    return hits[0]["voice_id"], hits[0]["name"]
+
+
+def save(config: Path, name: str, vid: str, use_in: str) -> None:
     cfg = json.loads(config.read_text(encoding="utf-8"))
     cfg.update(name=name, voiceId=vid)
     config.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"복제 목소리 생성: {name} ({vid}) → {config}")
-    if res.get("requires_verification"):
-        print("⚠️  일레븐랩스에서 목소리 확인(verification)을 요구합니다. 사이트의 My Voices 에서 확인해 주세요.")
-
+    print(f"채널 목소리 저장: {name} ({vid}) → {config}")
     if use_in:
         sp = ROOT / "episodes" / use_in / "script.json"
         script = json.loads(sp.read_text(encoding="utf-8"))
