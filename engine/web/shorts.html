@@ -49,7 +49,9 @@
     const shorts = await (await fetch(`../../episodes/${ep}/shorts.json`)).json();
     const mod = await import(`../../episodes/${ep}/scenes.js`);
     const sh = shorts[i];
-    const sys = { ext: ['6개월 연장 제도', 'mint', 'calendar-plus'], six: ['6+6 부모육아휴직제', 'gold', 'coins'] }[sh.sys];
+    // 제도 태그는 에피소드 scenes.js 의 SYS({key: {label, color, icon}})에서 가져옵니다
+    const tag = (mod.SYS || {})[sh.sys];
+    const sys = tag ? [tag.label, tag.color, tag.icon] : { ext: ['6개월 연장 제도', 'mint', 'calendar-plus'], six: ['6+6 부모육아휴직제', 'gold', 'coins'] }[sh.sys];
     document.getElementById('chips').innerHTML =
       `<div class="chip" style="border:3px solid var(--red);color:var(--red);background:rgba(255,255,255,0.8)">${icon('circle-help', { size: 32, stroke: 2.4 })}헷갈리는 포인트 ${sh.n}</div>` +
       `<div class="chip ${sys[1]}">${icon(sys[2], { size: 32 })}${sys[0]}</div>`;

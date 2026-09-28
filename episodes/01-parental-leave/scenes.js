@@ -19,7 +19,7 @@ export const chapters = {
 };
 
 // 헷갈리는 포인트가 어느 제도에 관한 것인지 표시하는 태그
-const SYS = {
+export const SYS = {
   ext: { label: '6개월 연장 제도', color: 'mint', icon: 'calendar-plus' },
   six: { label: '6+6 부모육아휴직제', color: 'gold', icon: 'coins' },
 };

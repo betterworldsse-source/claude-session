@@ -16,9 +16,14 @@ echo "▶ 3/8 배경음악 (장면 구간에 맞춰 섹션 전환)"
 read -r DUR SECTIONS < <(python3 - "$B/timeline.json" <<'PY'
 import json, sys
 tl = json.load(open(sys.argv[1], encoding="utf-8"))
+# 음악 전환: 도입 → 1장 → 2장 → 3장(없으면 요약) → 마지막 장면
+ch = {}
+for x in tl["scenes"]:
+    if x.get("chapter") is not None:
+        ch.setdefault(x["chapter"], x["start"])
+starts = [ch[k] for k in sorted(ch)]
 s = {x["id"]: x["start"] for x in tl["scenes"]}
-pick = lambda *ks: next(s[k] for k in ks if k in s)
-cuts = [0.0, pick("roadmap", "title", "basic"), pick("concept66", "caps"), pick("qa1", "scenario", "summary"), pick("outro")]
+cuts = [0.0] + (starts + [s.get("summary", tl["scenes"][-1]["start"])])[:3] + [tl["scenes"][-1]["start"]]
 print(f"{tl['duration'] + 0.5:.2f}", ",".join(f"{c:.2f}" for c in cuts))
 PY
 )
