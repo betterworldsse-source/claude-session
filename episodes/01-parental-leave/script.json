@@ -3,10 +3,7 @@
   "title": "육아휴직 6개월 연장 제도 & 6+6 부모육아휴직제 정리",
   "asOf": "2026년 9월 기준",
   "voice": {
-    "engine": "google-translate-tts",
-    "lang": "ko",
-    "tempo": 1.14,
-    "note": "가이드 내레이션입니다. overrides/<문장id>.wav 가 있으면 그 녹음을 대신 사용합니다."
+    "use": "channel"
   },
   "timing": {
     "leadIn": 0.5,
