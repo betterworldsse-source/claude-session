@@ -48,11 +48,29 @@ python3 engine/docs.py 01-parental-leave                     # 대본 문서 · 
 
 ## 내레이션을 내 목소리로 바꾸기
 
-현재 내레이션은 **가이드용 합성 음성**(Google 번역 TTS)입니다. 상업적 이용 조건이 명확하지 않으므로, 수익화할 채널이라면 본인 목소리나 상업 이용이 허용된 TTS로 바꾸는 것을 권장합니다.
+현재 내레이션은 **가이드용 합성 음성**(Google 번역 TTS)입니다. 채널 목소리는 **일레븐랩스 복제 목소리**로 쓰는 것을 기본으로 합니다.
+어떤 방식이든 영상이 목소리에 맞춰집니다. 모든 그래픽·자막·효과음이 문장(자막 구절) 시작 시각에 묶여 있어 목소리 길이가 바뀌면 자동으로 다시 계산됩니다.
 
-1. `episodes/01-parental-leave/script.md`를 보며 문장별로 녹음합니다.
-2. 파일 이름을 문장 ID로 맞춰 `episodes/01-parental-leave/overrides/`에 넣습니다. 예: `i1.wav`, `i2.wav`, … (`script.json`의 `id`)
-3. `bash engine/build.sh 01-parental-leave` 를 실행하면 녹음 길이에 맞춰 **그래픽·자막 타이밍이 자동으로 다시 계산**됩니다.
+### A. 일레븐랩스 복제 목소리 (채널 기본, 한 번 만들면 계속 사용)
+
+1. 일레븐랩스 Starter 이상 요금제에 가입합니다(인스턴트 보이스 클로닝).
+2. 작업 환경 설정(클라우드 환경 메뉴 → Edit)에서 두 가지를 추가하고 **새 세션**을 엽니다.
+   - 네트워크 접근: `api.elevenlabs.io` 허용
+   - 환경 변수: `ELEVENLABS_API_KEY` (키는 채팅에 붙여 넣지 않습니다)
+3. 1~2분 분량의 깨끗한 샘플로 목소리를 만듭니다. 목소리 ID가 `voice.json`에 저장되고, 에피소드가 채널 목소리를 쓰도록 바뀝니다.
+   ```bash
+   python3 engine/audio/eleven_clone.py 샘플.m4a --name "채널 목소리" --use-in 01-parental-leave
+   bash engine/build.sh 01-parental-leave
+   ```
+   일레븐랩스 사이트에서 직접 만든 경우에는 `voice.json`의 `voiceId`만 채우고 `script.json`의 `"voice"`를 `{"use": "channel"}`로 바꿉니다.
+4. 새 에피소드는 `script.json`에 `"voice": {"use": "channel"}`만 넣으면 같은 목소리로 만들어집니다. 문장마다 앞뒤 문장을 함께 넘겨 억양을 잇고, 만든 음성은 `.cache/tts`에 저장돼 다시 빌드해도 과금되지 않습니다.
+5. 목소리 설정(모델 `eleven_multilingual_v2`, 안정성·유사도·속도)은 `voice.json`의 `settings`에서 조정합니다. 요금제를 해지하면 목소리는 계정에 남지만, 다시 구독하기 전까지는 쓸 수 없습니다.
+
+### B. 직접 녹음
+
+1. `episodes/<에피소드>/recording.md`의 번호 순서대로 한 번에 녹음합니다. 번호가 바뀔 때마다 2~3초 쉽니다.
+2. `python3 engine/audio/split_voice.py <에피소드> 녹음.m4a [12.m4a …]` 로 번호별로 잘라 `overrides/`에 넣습니다. 특정 문장만 녹음 파일로 바꾸는 것도 이 방식입니다(`overrides/<문장id>.wav`가 있으면 어떤 엔진보다 우선).
+3. `bash engine/build.sh <에피소드>` 로 다시 빌드합니다.
 
 ## 새 에피소드 만들기
 

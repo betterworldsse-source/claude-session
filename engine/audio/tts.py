@@ -11,14 +11,22 @@
 
 직접 녹음한 목소리로 바꾸려면 overrides/<line-id>.wav 파일을 넣고 다시 실행하세요.
 해당 문장은 TTS 대신 녹음 파일을 사용하며, 영상 타이밍도 녹음 길이에 맞춰 다시 계산됩니다.
+
+음성 엔진 (script.json 의 "voice"):
+    {"engine": "google-translate-tts", "lang": "ko", "tempo": 1.14}   가이드용 합성 음성
+    {"use": "channel"}                                               채널 공용 목소리(voice.json) 사용
+voice.json 의 "engine": "elevenlabs" 는 일레븐랩스 복제 목소리로 문장별 음성을 만듭니다.
+환경 변수 ELEVENLABS_API_KEY 가 필요하고, 같은 문장은 .cache/tts 에 저장돼 다시 과금되지 않습니다.
 """
 
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -51,6 +59,65 @@ def fetch_tts(text: str, lang: str, cache_dir: Path) -> Path:
             print(f"  TTS 재시도 {attempt + 1}/5 ({exc}); {wait}s 대기", file=sys.stderr)
             time.sleep(wait)
     raise RuntimeError(f"TTS 실패: {text}")
+
+
+ELEVEN_BASE = os.environ.get("ELEVENLABS_BASE_URL", "https://api.elevenlabs.io")
+ELEVEN_SETTINGS = {"stability": 0.5, "similarity_boost": 0.8, "style": 0.0, "use_speaker_boost": True, "speed": 1.0}
+
+
+def fetch_eleven(text: str, voice: dict, cache_dir: Path, prev_text: str = "", next_text: str = "") -> Path:
+    """일레븐랩스 text-to-speech 로 한 문장을 만듭니다. 앞뒤 문장을 함께 넘겨 억양이 이어지게 합니다."""
+    key = os.environ.get("ELEVENLABS_API_KEY", "")
+    vid = voice.get("voiceId") or os.environ.get("ELEVENLABS_VOICE_ID", "")
+    if not key:
+        sys.exit("ELEVENLABS_API_KEY 환경 변수가 없습니다. 작업 환경 설정에서 등록한 뒤 새 세션에서 다시 실행하세요.")
+    if not vid:
+        sys.exit("복제 목소리 ID가 없습니다. engine/audio/eleven_clone.py 로 목소리를 만들면 voice.json 에 채워집니다.")
+    body = {"text": text, "model_id": voice.get("model", "eleven_multilingual_v2"),
+            "voice_settings": {**ELEVEN_SETTINGS, **voice.get("settings", {})}}
+    if voice.get("languageCode"):
+        body["language_code"] = voice["languageCode"]
+    if voice.get("stitch", True):
+        if prev_text:
+            body["previous_text"] = prev_text
+        if next_text:
+            body["next_text"] = next_text
+    fmt = voice.get("outputFormat", "mp3_44100_128")
+    tag = hashlib.sha1(json.dumps({"v": vid, "b": body, "f": fmt}, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:20]
+    out = cache_dir / f"eleven_{tag}.mp3"
+    if out.exists() and out.stat().st_size > 1000:
+        return out
+    url = f"{ELEVEN_BASE}/v1/text-to-speech/{vid}?output_format={fmt}"
+    data = json.dumps(body, ensure_ascii=False).encode("utf-8")
+    for attempt in range(5):
+        req = urllib.request.Request(url, data=data, method="POST", headers={
+            "xi-api-key": key, "Content-Type": "application/json", "Accept": "audio/mpeg"})
+        try:
+            audio = urllib.request.urlopen(req, timeout=180).read()
+            if len(audio) < 1000:
+                raise RuntimeError(f"too small response ({len(audio)} bytes)")
+            out.write_bytes(audio)
+            return out
+        except urllib.error.HTTPError as exc:
+            detail = exc.read()[:400].decode("utf-8", "replace")
+            if exc.code != 429 and exc.code < 500:
+                sys.exit(f"일레븐랩스 오류 {exc.code}: {detail}")
+            wait = 2 ** (attempt + 1)
+            print(f"  일레븐랩스 재시도 {attempt + 1}/5 (HTTP {exc.code}); {wait}s 대기", file=sys.stderr)
+            time.sleep(wait)
+        except (urllib.error.URLError, TimeoutError, RuntimeError) as exc:
+            wait = 2 ** (attempt + 1)
+            print(f"  일레븐랩스 재시도 {attempt + 1}/5 ({exc}); {wait}s 대기", file=sys.stderr)
+            time.sleep(wait)
+    raise RuntimeError(f"일레븐랩스 음성 생성 실패: {text}")
+
+
+def resolve_voice(voice: dict) -> dict:
+    """{"use": "channel"} 이면 저장소 루트의 voice.json(채널 공용 목소리)을 읽습니다."""
+    if voice.get("use") == "channel":
+        base = json.loads((ROOT / "voice.json").read_text(encoding="utf-8"))
+        return {**base, **{k: v for k, v in voice.items() if k != "use"}}
+    return voice
 
 
 def decode(path: Path, tempo: float) -> np.ndarray:
@@ -135,20 +202,31 @@ def main(ep_dir: str) -> None:
     cache.mkdir(parents=True, exist_ok=True)
     overrides = ep_path / "overrides"
 
-    voice = script["voice"]
+    voice = resolve_voice(script["voice"])
+    engine = voice.get("engine", "google-translate-tts")
     timing = script["timing"]
     clips = {}
+    spoken_all = [l["tts"].replace("|", " ") for sc in script["scenes"] for l in sc.get("lines", [])]
+    idx = 0
 
     for scene in script["scenes"]:
         for line in scene.get("lines", []):
             lid = line["id"]
+            text = spoken_all[idx]
+            prev_text = spoken_all[idx - 1] if idx > 0 else ""
+            next_text = spoken_all[idx + 1] if idx + 1 < len(spoken_all) else ""
+            idx += 1
             override = overrides / f"{lid}.wav"
             if override.exists():
                 audio = trim_silence(decode(override, 1.0))
                 source = "override"
+            elif engine == "elevenlabs":
+                mp3 = fetch_eleven(text, voice, cache, prev_text, next_text)
+                audio = trim_silence(decode(mp3, voice.get("tempo", 1.0)))
+                source = "eleven"
             else:
-                mp3 = fetch_tts(line["tts"].replace("|", " "), voice["lang"], cache)
-                audio = trim_silence(decode(mp3, voice["tempo"]))
+                mp3 = fetch_tts(text, voice.get("lang", "ko"), cache)
+                audio = trim_silence(decode(mp3, voice.get("tempo", 1.0)))
                 source = "tts"
             audio = normalize_rms(audio)
             sf.write(build / "lines" / f"{lid}.wav", audio, SR, subtype="PCM_24")
