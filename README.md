@@ -5,11 +5,11 @@
 
 ## 1화: 육아휴직 6개월 연장 제도 & 6+6 부모육아휴직제 (2026년 9월 기준)
 
-구성: 훅(부부 최대 3년·4,000만 원) → 오늘 소개할 제도 두 가지 → ① 6개월 연장 제도(성립 조건) → ② 6+6 부모육아휴직제(어떤 제도인지·월급별 표) → ③ 헷갈리는 포인트 4가지 → ④ 신청 방법 3단계 → 3줄 요약. 내레이션은 '~입니다' 체입니다.
+구성: 훅(부부 최대 3년·4,000만 원) → 오늘 소개할 제도 두 가지 → ① 6개월 연장 제도(성립 조건) → ② 6+6 부모육아휴직제(어떤 제도인지·월급별 표) → ③ 헷갈리는 포인트 4가지 → ④ 신청 방법 3단계 → 3줄 요약. 내레이션은 '~입니다' 체에 '~요'를 섞어 종결어미를 다양하게 했습니다.
 
 | 파일 | 내용 |
 |---|---|
-| `episodes/01-parental-leave/output/01-parental-leave_1080p.mp4` | 완성 영상 (1920×1080, 30fps, 약 3분 28초, -14 LUFS, 일레븐랩스 채널 목소리) · 빌드하면 생기며 저장소에는 올리지 않음 |
+| `episodes/01-parental-leave/output/01-parental-leave_1080p.mp4` | 완성 영상 (1920×1080, 30fps, 약 3분 13초, -14 LUFS, 일레븐랩스 채널 목소리) · 빌드하면 생기며 저장소에는 올리지 않음 |
 | `episodes/01-parental-leave/output/shorts/*.mp4` | 쇼츠 4편 (1080×1920, 헷갈리는 포인트별) · 구성은 `shorts.json` · 저장소에는 올리지 않음 |
 | `episodes/01-parental-leave/thumbnail.png` | 유튜브 썸네일 (1280×720) |
 | `episodes/01-parental-leave/subtitles.srt` | 유튜브 자막 업로드용 SRT |
@@ -65,8 +65,9 @@ python3 engine/docs.py 01-parental-leave                     # 대본 문서 · 
    bash engine/build.sh 01-parental-leave
    ```
    일레븐랩스 사이트에서 직접 복제했다면 이름으로 찾아 저장합니다: `python3 engine/audio/eleven_clone.py --find "채널 목소리" --use-in 01-parental-leave`
-4. 새 에피소드는 `script.json`에 `"voice": {"use": "channel"}`만 넣으면 같은 목소리로 만들어집니다. 장면을 한 번에 읽혀 억양을 잇고, 만든 음성은 `.cache/tts`에 저장돼 다시 빌드해도 과금되지 않습니다.
-5. 목소리 설정은 `voice.json`에서 조정합니다. 기본은 모델 `eleven_v3` + `"unit": "scene"`(장면 단위로 읽혀 자연스럽게 잇고, 글자 타임스탬프로 문장별로 자름)이며, `eleven_multilingual_v2`로 바꾸면 문장 단위(앞뒤 문장 전달)로 만듭니다. 특정 장면을 다시 읽히려면 `script.json`의 그 장면에 `"seed"`를 넣거나 바꿉니다. 요금제를 해지하면 목소리는 계정에 남지만, 다시 구독하기 전까지는 쓸 수 없습니다.
+4. 새 에피소드는 `script.json`에 `"voice": {"use": "channel"}`만 넣으면 같은 목소리로 만들어집니다. 문장마다 앞뒤 문장을 함께 넘겨 억양을 잇고, 만든 음성은 `.cache/tts`에 저장돼 다시 빌드해도 과금되지 않습니다.
+5. 목소리 설정은 `voice.json`에서 조정합니다. 기본은 모델 `eleven_multilingual_v2`, 문장 단위(앞뒤 문장을 함께 넘겨 억양을 이음)입니다. `eleven_v3` + `"unit": "scene"`(장면 단위)도 지원하지만 인스턴트 클론에서는 목소리가 중간에 달라지는 일이 있어 쓰지 않습니다. 요금제를 해지하면 목소리는 계정에 남지만, 다시 구독하기 전까지는 쓸 수 없습니다.
+6. 목소리 일관성 검사: `python3 engine/audio/voice_check.py <에피소드>` 가 문장마다 원본 샘플과의 화자 유사도를 보여 주고, `--retake 4` 는 튀는 문장을 seed 1~4로 다시 만들어 가장 비슷한 테이크를 `script.json`(문장의 `seed`)에 저장합니다. 필요: `pip install torch resemblyzer librosa "setuptools<81"`.
 
 ### B. 직접 녹음
 

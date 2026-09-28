@@ -69,7 +69,7 @@ ELEVEN_SETUP = ("설정: 작업 환경 편집 → API credentials → Add creden
 ELEVEN_SETTINGS = {"stability": 0.5, "similarity_boost": 0.8, "style": 0.0, "use_speaker_boost": True, "speed": 1.0}
 
 
-def fetch_eleven(text: str, voice: dict, cache_dir: Path, prev_text: str = "", next_text: str = "") -> Path:
+def fetch_eleven(text: str, voice: dict, cache_dir: Path, prev_text: str = "", next_text: str = "", seed=None) -> Path:
     """일레븐랩스 text-to-speech 로 한 문장을 만듭니다. 앞뒤 문장을 함께 넘겨 억양이 이어지게 합니다."""
     key = os.environ.get("ELEVENLABS_API_KEY", "")  # 없으면 작업 환경의 API 자격 증명이 요청에 키를 붙입니다
     vid = voice.get("voiceId") or os.environ.get("ELEVENLABS_VOICE_ID", "")
@@ -79,6 +79,8 @@ def fetch_eleven(text: str, voice: dict, cache_dir: Path, prev_text: str = "", n
             "voice_settings": {**ELEVEN_SETTINGS, **voice.get("settings", {})}}
     if voice.get("languageCode"):
         body["language_code"] = voice["languageCode"]
+    if seed is not None:  # 문장의 "seed"를 바꾸면 같은 문장을 다른 테이크로 다시 만듭니다
+        body["seed"] = seed
     if voice.get("stitch", True):
         if prev_text:
             body["previous_text"] = prev_text
@@ -300,7 +302,7 @@ def main(ep_dir: str) -> None:
                 audio = pieces[lid]
                 source = "eleven·scene"
             elif engine == "elevenlabs":
-                mp3 = fetch_eleven(text, voice, cache, prev_text, next_text)
+                mp3 = fetch_eleven(text, voice, cache, prev_text, next_text, line.get("seed"))
                 audio = trim_silence(decode(mp3, voice.get("tempo", 1.0)))
                 source = "eleven"
             else:
