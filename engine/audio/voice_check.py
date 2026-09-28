@@ -99,6 +99,7 @@ def main() -> None:
     if voice.get("unit") == "scene":
         sys.exit("--retake 는 문장 단위(unit: line) 목소리에서만 씁니다.")
     spoken = [l["tts"].replace("|", " ") for sc in script["scenes"] for l in sc.get("lines", [])]
+    context = [l.get("ttsContext", l["tts"]).replace("|", " ") for sc in script["scenes"] for l in sc.get("lines", [])]
     order = [l["id"] for sc in script["scenes"] for l in sc.get("lines", [])]
     cache = ROOT / ".cache" / "tts"
     changed = 0
@@ -107,8 +108,8 @@ def main() -> None:
             continue
         line = r["line"]
         i = order.index(line["id"])
-        prev_text = spoken[i - 1] if i > 0 else ""
-        next_text = spoken[i + 1] if i + 1 < len(spoken) else ""
+        prev_text = context[i - 1] if i > 0 else ""
+        next_text = context[i + 1] if i + 1 < len(context) else ""
         best = (r["gap"], line.get("seed"))
         for seed in range(1, args.retake + 1):
             if seed == line.get("seed"):

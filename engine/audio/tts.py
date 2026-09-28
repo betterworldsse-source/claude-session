@@ -273,6 +273,8 @@ def main(ep_dir: str) -> None:
     timing = script["timing"]
     clips = {}
     spoken_all = [l["tts"].replace("|", " ") for sc in script["scenes"] for l in sc.get("lines", [])]
+    # 앞뒤 문장에 넘기는 글: "ttsContext"가 있으면 그것을 씁니다(한 문장만 고칠 때 이웃 문장의 테이크를 그대로 두기 위함)
+    context_all = [l.get("ttsContext", l["tts"]).replace("|", " ") for sc in script["scenes"] for l in sc.get("lines", [])]
     idx = 0
 
     scene_unit = engine == "elevenlabs" and voice.get("unit") == "scene"
@@ -291,8 +293,8 @@ def main(ep_dir: str) -> None:
         for line in scene.get("lines", []):
             lid = line["id"]
             text = spoken_all[idx]
-            prev_text = spoken_all[idx - 1] if idx > 0 else ""
-            next_text = spoken_all[idx + 1] if idx + 1 < len(spoken_all) else ""
+            prev_text = context_all[idx - 1] if idx > 0 else ""
+            next_text = context_all[idx + 1] if idx + 1 < len(context_all) else ""
             idx += 1
             override = overrides / f"{lid}.wav"
             if override.exists():
