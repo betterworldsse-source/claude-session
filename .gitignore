@@ -3,3 +3,7 @@ __pycache__/
 .cache/
 build/
 *.log
+
+# 영상은 저장소에 올리지 않습니다 (채팅으로 받아 로컬 PC에 보관)
+*.mp4
+episodes/*/output/

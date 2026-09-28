@@ -10,7 +10,9 @@
 - 길이는 3~4분대, 쇼츠는 헷갈리는 포인트마다 1편(`shorts.json`).
 
 ## 목소리
-- 채널 목소리는 일레븐랩스 복제 목소리: `voice.json`(목소리 ID·모델·설정). 에피소드 `script.json`에 `"voice": {"use": "channel"}`.
+- 채널 목소리는 일레븐랩스 복제 목소리: `voice.json`(목소리 ID·모델·설정). 모델은 `eleven_v3`, `"unit": "scene"`(장면을 한 번에 읽혀 억양을 잇고 글자 타임스탬프로 문장별로 자름). 에피소드 `script.json`에 `"voice": {"use": "channel"}`.
+- TTS 문장(`tts`)의 숫자는 단위와 붙여 한글로 씁니다(`육개월`, `삼년`, `이백오십만 원`). 띄어 쓰면 숫자만 끊어 강조해 읽습니다. 화면에 없는 쉼표를 TTS에만 넣지 않습니다. `고용24`는 `고용이십사`.
+- 만든 뒤 일레븐랩스 음성 인식(`/v1/speech-to-text`)으로 문장별로 받아 적어 대본과 비교합니다. 잘못 읽은 장면은 `script.json` 장면에 `"seed"`를 바꿔 다시 만듭니다.
 - 인증은 작업 환경의 **API credentials**(Pro·Max)가 기본입니다: Allowed websites `api.elevenlabs.io`, 헤더 이름 `xi-api-key`, 접두사 없음. 이 경우 세션에 `ELEVENLABS_API_KEY` 환경 변수가 **없는 게 정상**이고(프록시가 요청에 키를 붙임), 네트워크 허용도 따로 필요 없습니다. 대안: 환경 변수 `ELEVENLABS_API_KEY` + 네트워크 Custom에 `api.elevenlabs.io`(기본 목록 포함 체크).
 - 작업 전에 `python3 engine/audio/eleven_clone.py --check` 로 연결·인증·목소리 ID를 먼저 확인합니다. 환경 변수가 없다는 이유만으로 막혔다고 판단하지 않습니다.
 - 키를 채팅에 붙여 넣으라고 요청하지 않습니다. 채팅에 올라온 키는 쓰지 말고 폐기·재발급을 권합니다.
@@ -23,4 +25,4 @@
 - 드라이브 커넥터는 파일 내용을 대화 안에 글자로 옮기므로 **큰 음성·영상 파일은 받아올 수 없습니다**. 음성 파일이 필요하면 GitHub 작업 브랜치의 `episodes/<ep>/recordings/`에 올려 달라고 합니다.
 
 ## 전달
-- 1080p 최종본은 `episodes/<ep>/output/`에 커밋, 채팅에는 720p 미리보기(30MB 이하)를 보냅니다. `build/`는 커밋하지 않습니다.
+- **영상 파일(.mp4)은 GitHub에 올리지 않습니다**(사용자 결정, `.gitignore`로 막아 둠). 1080p 최종본·쇼츠는 채팅 파일로 보내 사용자가 로컬 PC에 저장하고, 720p 미리보기(30MB 이하)도 함께 보냅니다. `build/`·`episodes/<ep>/output/`는 커밋하지 않습니다.

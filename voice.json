@@ -2,7 +2,7 @@
   "engine": "elevenlabs",
   "name": "",
   "voiceId": "v3ICDoRqYtEndCLccGGN",
-  "model": "eleven_multilingual_v2",
+  "model": "eleven_v3",
   "outputFormat": "mp3_44100_128",
   "tempo": 1.0,
   "stitch": true,
@@ -10,7 +10,7 @@
     "stability": 0.5,
     "similarity_boost": 0.8,
     "style": 0.0,
-    "use_speaker_boost": true,
-    "speed": 1.0
-  }
+    "use_speaker_boost": true
+  },
+  "unit": "scene"
 }

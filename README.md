@@ -9,8 +9,8 @@
 
 | 파일 | 내용 |
 |---|---|
-| `episodes/01-parental-leave/output/01-parental-leave_1080p.mp4` | 완성 영상 (1920×1080, 30fps, 약 3분 34초, -14 LUFS, 일레븐랩스 채널 목소리) |
-| `episodes/01-parental-leave/output/shorts/*.mp4` | 쇼츠 4편 (1080×1920, 헷갈리는 포인트별) · 구성은 `shorts.json` |
+| `episodes/01-parental-leave/output/01-parental-leave_1080p.mp4` | 완성 영상 (1920×1080, 30fps, 약 3분 28초, -14 LUFS, 일레븐랩스 채널 목소리) · 빌드하면 생기며 저장소에는 올리지 않음 |
+| `episodes/01-parental-leave/output/shorts/*.mp4` | 쇼츠 4편 (1080×1920, 헷갈리는 포인트별) · 구성은 `shorts.json` · 저장소에는 올리지 않음 |
 | `episodes/01-parental-leave/thumbnail.png` | 유튜브 썸네일 (1280×720) |
 | `episodes/01-parental-leave/subtitles.srt` | 유튜브 자막 업로드용 SRT |
 | `episodes/01-parental-leave/youtube.md` | 제목 후보 · 설명란(챕터 포함) · 태그 · 고정 댓글 |
@@ -65,8 +65,8 @@ python3 engine/docs.py 01-parental-leave                     # 대본 문서 · 
    bash engine/build.sh 01-parental-leave
    ```
    일레븐랩스 사이트에서 직접 복제했다면 이름으로 찾아 저장합니다: `python3 engine/audio/eleven_clone.py --find "채널 목소리" --use-in 01-parental-leave`
-4. 새 에피소드는 `script.json`에 `"voice": {"use": "channel"}`만 넣으면 같은 목소리로 만들어집니다. 문장마다 앞뒤 문장을 함께 넘겨 억양을 잇고, 만든 음성은 `.cache/tts`에 저장돼 다시 빌드해도 과금되지 않습니다.
-5. 목소리 설정(모델 `eleven_multilingual_v2`, 안정성·유사도·속도)은 `voice.json`의 `settings`에서 조정합니다. 요금제를 해지하면 목소리는 계정에 남지만, 다시 구독하기 전까지는 쓸 수 없습니다.
+4. 새 에피소드는 `script.json`에 `"voice": {"use": "channel"}`만 넣으면 같은 목소리로 만들어집니다. 장면을 한 번에 읽혀 억양을 잇고, 만든 음성은 `.cache/tts`에 저장돼 다시 빌드해도 과금되지 않습니다.
+5. 목소리 설정은 `voice.json`에서 조정합니다. 기본은 모델 `eleven_v3` + `"unit": "scene"`(장면 단위로 읽혀 자연스럽게 잇고, 글자 타임스탬프로 문장별로 자름)이며, `eleven_multilingual_v2`로 바꾸면 문장 단위(앞뒤 문장 전달)로 만듭니다. 특정 장면을 다시 읽히려면 `script.json`의 그 장면에 `"seed"`를 넣거나 바꿉니다. 요금제를 해지하면 목소리는 계정에 남지만, 다시 구독하기 전까지는 쓸 수 없습니다.
 
 ### B. 직접 녹음
 

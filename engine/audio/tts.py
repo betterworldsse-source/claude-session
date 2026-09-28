@@ -19,6 +19,7 @@ voice.json 의 "engine": "elevenlabs" 는 일레븐랩스 복제 목소리로 �
 환경 변수 ELEVENLABS_API_KEY 가 필요하고, 같은 문장은 .cache/tts 에 저장돼 다시 과금되지 않습니다.
 """
 
+import base64
 import hashlib
 import json
 import os
@@ -115,6 +116,64 @@ def fetch_eleven(text: str, voice: dict, cache_dir: Path, prev_text: str = "", n
             print(f"  일레븐랩스 재시도 {attempt + 1}/5 ({exc}); {wait}s 대기", file=sys.stderr)
             time.sleep(wait)
     sys.exit(f"api.elevenlabs.io 에 연결하지 못했습니다.\n{ELEVEN_SETUP}")
+
+
+def fetch_eleven_scene(texts: list, voice: dict, cache_dir: Path, seed=None) -> tuple:
+    """장면의 문장들을 한 번에 읽혀 억양을 자연스럽게 잇고, 글자별 타임스탬프로 문장 경계를 돌려줍니다.
+    반환: (mp3 경로, [(문장 시작초, 문장 끝초), …])"""
+    key = os.environ.get("ELEVENLABS_API_KEY", "")
+    vid = voice.get("voiceId") or os.environ.get("ELEVENLABS_VOICE_ID", "")
+    if not vid:
+        sys.exit("복제 목소리 ID가 없습니다. engine/audio/eleven_clone.py 로 목소리를 만들면 voice.json 에 채워집니다.")
+    text = " ".join(texts)
+    body = {"text": text, "model_id": voice.get("model", "eleven_v3"),
+            "voice_settings": {**ELEVEN_SETTINGS, **voice.get("settings", {})}}
+    if voice.get("languageCode"):
+        body["language_code"] = voice["languageCode"]
+    if seed is not None:  # 장면의 "seed"를 바꾸면 같은 문장을 다른 읽기로 다시 만듭니다
+        body["seed"] = seed
+    fmt = voice.get("outputFormat", "mp3_44100_128")
+    tag = hashlib.sha1(json.dumps({"v": vid, "b": body, "f": fmt, "ts": 1}, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:20]
+    out = cache_dir / f"eleven_scene_{tag}.mp3"
+    align_path = cache_dir / f"eleven_scene_{tag}.json"
+    if not (out.exists() and align_path.exists()):
+        url = f"{ELEVEN_BASE}/v1/text-to-speech/{vid}/with-timestamps?output_format={fmt}"
+        data = json.dumps(body, ensure_ascii=False).encode("utf-8")
+        for attempt in range(5):
+            headers = {"Content-Type": "application/json"}
+            if key:
+                headers["xi-api-key"] = key
+            req = urllib.request.Request(url, data=data, method="POST", headers=headers)
+            try:
+                res = json.loads(urllib.request.urlopen(req, timeout=300).read())
+                out.write_bytes(base64.b64decode(res["audio_base64"]))
+                align_path.write_text(json.dumps(res["alignment"], ensure_ascii=False), encoding="utf-8")
+                break
+            except urllib.error.HTTPError as exc:
+                detail = exc.read()[:400].decode("utf-8", "replace")
+                if exc.code in (401, 403):
+                    sys.exit(f"일레븐랩스 인증 실패 (HTTP {exc.code}): {detail}\n{ELEVEN_SETUP}")
+                if exc.code != 429 and exc.code < 500:
+                    sys.exit(f"일레븐랩스 오류 {exc.code}: {detail}")
+                wait = 2 ** (attempt + 1)
+                print(f"  일레븐랩스 재시도 {attempt + 1}/5 (HTTP {exc.code}); {wait}s 대기", file=sys.stderr)
+                time.sleep(wait)
+            except (urllib.error.URLError, TimeoutError, KeyError, ValueError) as exc:
+                wait = 2 ** (attempt + 1)
+                print(f"  일레븐랩스 재시도 {attempt + 1}/5 ({exc}); {wait}s 대기", file=sys.stderr)
+                time.sleep(wait)
+        else:
+            sys.exit(f"api.elevenlabs.io 에 연결하지 못했습니다.\n{ELEVEN_SETUP}")
+    al = json.loads(align_path.read_text(encoding="utf-8"))
+    chars, starts, ends = al["characters"], al["character_start_times_seconds"], al["character_end_times_seconds"]
+    if "".join(chars) != text:
+        raise RuntimeError("타임스탬프 글자가 요청 문장과 다릅니다")
+    spans, pos = [], 0
+    for t in texts:
+        idx = [i for i in range(pos, pos + len(t)) if not chars[i].isspace()]
+        spans.append((starts[idx[0]], ends[idx[-1]]))
+        pos += len(t) + 1
+    return out, spans
 
 
 def resolve_voice(voice: dict) -> dict:
@@ -214,7 +273,19 @@ def main(ep_dir: str) -> None:
     spoken_all = [l["tts"].replace("|", " ") for sc in script["scenes"] for l in sc.get("lines", [])]
     idx = 0
 
+    scene_unit = engine == "elevenlabs" and voice.get("unit") == "scene"
     for scene in script["scenes"]:
+        pieces = {}
+        if scene_unit and scene.get("lines"):
+            # 장면 전체를 한 번에 읽힌 뒤 문장 사이 무음의 가운데에서 자릅니다
+            texts = [l["tts"].replace("|", " ") for l in scene["lines"]]
+            mp3, spans = fetch_eleven_scene(texts, voice, cache, scene.get("seed"))
+            tempo = voice.get("tempo", 1.0)
+            full = decode(mp3, tempo)
+            cuts = [0.0] + [(spans[i][1] + spans[i + 1][0]) / 2 for i in range(len(spans) - 1)] + [len(full) / SR * tempo]
+            for i, l in enumerate(scene["lines"]):
+                a, b = int(cuts[i] / tempo * SR), int(cuts[i + 1] / tempo * SR)
+                pieces[l["id"]] = trim_silence(full[a:b])
         for line in scene.get("lines", []):
             lid = line["id"]
             text = spoken_all[idx]
@@ -225,6 +296,9 @@ def main(ep_dir: str) -> None:
             if override.exists():
                 audio = trim_silence(decode(override, 1.0))
                 source = "override"
+            elif lid in pieces:
+                audio = pieces[lid]
+                source = "eleven·scene"
             elif engine == "elevenlabs":
                 mp3 = fetch_eleven(text, voice, cache, prev_text, next_text)
                 audio = trim_silence(decode(mp3, voice.get("tempo", 1.0)))
