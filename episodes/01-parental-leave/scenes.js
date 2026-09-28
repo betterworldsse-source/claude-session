@@ -5,6 +5,7 @@
 // 모든 타이밍이 문장/자막 기준이라, 내 목소리로 녹음을 바꿔도 그래픽이 자동으로 따라갑니다.
 // 시각 언어: "블록 1개 = 1개월", "블록 1개 = 50만 원" — 블록이 떨어져 쌓이며 설명합니다.
 import { ease, P, clamp, lerp, wave, mount, tf, opacity, enter, pop, drop, rise, countTo, prepDraw, draw, icon } from '../../engine/web/engine.js';
+import { coverScene } from '../../engine/web/cover.js';
 import { avatar, family, blink, coins } from '../../engine/web/art.js';
 
 export const asOf = '2026년 9월 기준';
@@ -929,4 +930,6 @@ const outro = {
   },
 };
 
-export const scenes = [intro, basic, conditions, both, concept66, stairsScene, example, table, qa1, qa2, qa3, qa4, steps, summary, outro];
+const cover = coverScene({ n: 1, title: '육아휴직 6개월 연장 & 6+6' });
+
+export const scenes = [cover, intro, basic, conditions, both, concept66, stairsScene, example, table, qa1, qa2, qa3, qa4, steps, summary, outro];

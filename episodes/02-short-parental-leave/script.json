@@ -13,6 +13,10 @@
   },
   "scenes": [
     {
+      "id": "cover",
+      "duration": 3.6
+    },
+    {
       "id": "intro",
       "leadIn": 0.45,
       "ytChapter": "오늘의 주제: 1주·2주 단기 육아휴직",

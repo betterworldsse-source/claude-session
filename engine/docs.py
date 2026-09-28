@@ -25,6 +25,8 @@ def main(ep: str) -> None:
     lines = {l["id"]: l for l in timeline["lines"]}
 
     chapters = [f"{tc(scenes[s['id']]['start'])} {s['ytChapter']}" for s in script["scenes"] if s.get("ytChapter")]
+    if chapters:  # 유튜브 챕터는 00:00에서 시작해야 합니다(앞에 표지 장면이 있어도 첫 챕터는 0초)
+        chapters[0] = "00:00" + chapters[0][5:]
 
     md = [f"# {script['title']}", "", f"- 기준일: {script['asOf']}",
           f"- 전체 길이: {tc(timeline['duration'])} ({timeline['duration']:.1f}초)",

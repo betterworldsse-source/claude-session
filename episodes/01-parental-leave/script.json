@@ -12,6 +12,10 @@
   },
   "scenes": [
     {
+      "id": "cover",
+      "duration": 3.6
+    },
+    {
       "id": "intro",
       "leadIn": 0.45,
       "ytChapter": "오늘의 주제: 6개월 연장 제도 · 6+6 부모육아휴직제",

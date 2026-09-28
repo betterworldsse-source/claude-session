@@ -2,6 +2,7 @@
 // 흐름: 훅(방학·아플 때 1주·2주) → 오늘 알아볼 두 가지 → ① 쓸 수 있는 조건 → ② 쓰는 방법과 급여 → ③ 헷갈리는 포인트 → ④ 신청 방법 → 정리
 // 1화와 같은 시각 언어: "타일 1칸 = 하루", 카드 뒤집기, 떨어지는 블록. 모든 타이밍은 문장/자막 시작 시각 기준입니다.
 import { ease, P, clamp, lerp, wave, mount, tf, opacity, enter, pop, drop, rise, prepDraw, draw, icon } from '../../engine/web/engine.js';
+import { coverScene } from '../../engine/web/cover.js';
 import { avatar, family, blink, coins, baby } from '../../engine/web/art.js';
 
 export const asOf = '2026년 9월 기준';
@@ -698,4 +699,6 @@ const outro = {
   },
 };
 
-export const scenes = [intro, what, target, rules, pay, qa1, qa2, qa3, qa4, steps, summary, outro];
+const cover = coverScene({ n: 2, title: '1주·2주 단기 육아휴직' });
+
+export const scenes = [cover, intro, what, target, rules, pay, qa1, qa2, qa3, qa4, steps, summary, outro];
