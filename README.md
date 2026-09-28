@@ -9,7 +9,7 @@
 
 | 파일 | 내용 |
 |---|---|
-| `episodes/01-parental-leave/output/01-parental-leave_1080p.mp4` | 완성 영상 (1920×1080, 30fps, 약 4분 15초, -14 LUFS) |
+| `episodes/01-parental-leave/output/01-parental-leave_1080p.mp4` | 완성 영상 (1920×1080, 30fps, 약 3분 34초, -14 LUFS, 일레븐랩스 채널 목소리) |
 | `episodes/01-parental-leave/output/shorts/*.mp4` | 쇼츠 4편 (1080×1920, 헷갈리는 포인트별) · 구성은 `shorts.json` |
 | `episodes/01-parental-leave/thumbnail.png` | 유튜브 썸네일 (1280×720) |
 | `episodes/01-parental-leave/subtitles.srt` | 유튜브 자막 업로드용 SRT |
@@ -48,7 +48,7 @@ python3 engine/docs.py 01-parental-leave                     # 대본 문서 · 
 
 ## 내레이션을 내 목소리로 바꾸기
 
-현재 내레이션은 **가이드용 합성 음성**(Google 번역 TTS)입니다. 채널 목소리는 **일레븐랩스 복제 목소리**로 쓰는 것을 기본으로 합니다.
+1화 내레이션은 **일레븐랩스 채널 목소리**로 만들었습니다. 채널 목소리는 **일레븐랩스 복제 목소리**로 쓰는 것을 기본으로 합니다.
 어떤 방식이든 영상이 목소리에 맞춰집니다. 모든 그래픽·자막·효과음이 문장(자막 구절) 시작 시각에 묶여 있어 목소리 길이가 바뀌면 자동으로 다시 계산됩니다.
 
 ### A. 일레븐랩스 복제 목소리 (채널 기본, 한 번 만들면 계속 사용)
