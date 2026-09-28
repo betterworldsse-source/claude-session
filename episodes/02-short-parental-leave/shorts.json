@@ -1,0 +1,6 @@
+[
+  { "id": "short1-split", "scene": "qa1", "fromLine": "a1q", "fromChunk": 1, "n": 1, "sys": "use", "title": "단기 육아휴직,<br>1주씩 두 번?", "answerLine": "a1a" },
+  { "id": "short2-two-kids", "scene": "qa2", "fromLine": "a2q", "fromChunk": 1, "n": 2, "sys": "use", "title": "아이가 둘이면<br>몇 번 쓸 수 있나?", "answerLine": "a2a" },
+  { "id": "short3-vacation", "scene": "qa3", "fromLine": "a3q", "fromChunk": 1, "n": 3, "sys": "cond", "title": "방학이면<br>언제든 가능?", "answerLine": "a3a" },
+  { "id": "short4-refuse", "scene": "qa4", "fromLine": "a4q", "fromChunk": 1, "n": 4, "sys": "cond", "title": "회사가<br>거부할 수 있나?", "answerLine": "a4a" }
+]
