@@ -9,6 +9,13 @@
     timeline.json         장면/문장/자막 청크의 시작·끝 시각
 그리고 episodes/<episode>/subtitles.srt 를 갱신합니다.
 
+    python3 engine/audio/tts.py episodes/01-parental-leave --lock   # 지금 쓰인 음성을 확정본으로 잠금
+
+확정본 잠금(voice/): 사용자가 확정한 에피소드는 문장별 일레븐랩스 음성을 episodes/<ep>/voice/<문장id>.mp3 로 저장하고,
+voice/lock.json 에 요청 내용의 지문(tag)을 적어 둡니다. 다시 빌드할 때 문장·설정·seed·앞뒤 문장이 같으면 잠긴 파일을 그대로 씁니다
+(일레븐랩스는 같은 요청도 생성할 때마다 목소리가 달라지므로, 잠금이 있어야 언제 다시 만들어도 같은 소리가 납니다).
+바뀐 문장만 새로 만들어지고, 그 경우 "잠금과 다름"으로 표시됩니다. 확인이 끝나면 --lock 으로 다시 잠급니다.
+
 직접 녹음한 목소리로 바꾸려면 overrides/<line-id>.wav 파일을 넣고 다시 실행하세요.
 해당 문장은 TTS 대신 녹음 파일을 사용하며, 영상 타이밍도 녹음 길이에 맞춰 다시 계산됩니다.
 
@@ -69,8 +76,13 @@ ELEVEN_SETUP = ("설정: 작업 환경 편집 → API credentials → Add creden
 ELEVEN_SETTINGS = {"stability": 0.5, "similarity_boost": 0.8, "style": 0.0, "use_speaker_boost": True, "speed": 1.0}
 
 
-def fetch_eleven(text: str, voice: dict, cache_dir: Path, prev_text: str = "", next_text: str = "", seed=None) -> Path:
-    """일레븐랩스 text-to-speech 로 한 문장을 만듭니다. 앞뒤 문장을 함께 넘겨 억양이 이어지게 합니다."""
+USED = {}  # 이번 실행에서 쓴 문장별 (tag, mp3 경로) — --lock 이 확정본으로 복사합니다
+
+
+def fetch_eleven(text: str, voice: dict, cache_dir: Path, prev_text: str = "", next_text: str = "", seed=None,
+                 lock_dir: Path = None, lid: str = None) -> Path:
+    """일레븐랩스 text-to-speech 로 한 문장을 만듭니다. 앞뒤 문장을 함께 넘겨 억양이 이어지게 합니다.
+    lock_dir(episodes/<ep>/voice)에 같은 요청의 확정본이 있으면 그 파일을 씁니다."""
     key = os.environ.get("ELEVENLABS_API_KEY", "")  # 없으면 작업 환경의 API 자격 증명이 요청에 키를 붙입니다
     vid = voice.get("voiceId") or os.environ.get("ELEVENLABS_VOICE_ID", "")
     if not vid:
@@ -88,7 +100,17 @@ def fetch_eleven(text: str, voice: dict, cache_dir: Path, prev_text: str = "", n
             body["next_text"] = next_text
     fmt = voice.get("outputFormat", "mp3_44100_128")
     tag = hashlib.sha1(json.dumps({"v": vid, "b": body, "f": fmt}, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:20]
+    if lock_dir is not None and lid:
+        lock_file = lock_dir / "lock.json"
+        locked = json.loads(lock_file.read_text(encoding="utf-8")) if lock_file.exists() else {}
+        if locked.get(lid) == tag and (lock_dir / f"{lid}.mp3").exists():
+            USED[lid] = (tag, lock_dir / f"{lid}.mp3", "locked")
+            return lock_dir / f"{lid}.mp3"
+        if lid in locked:
+            print(f"  {lid}: 잠금과 다름 → 새로 만듭니다", file=sys.stderr)
     out = cache_dir / f"eleven_{tag}.mp3"
+    if lid:
+        USED[lid] = (tag, out, "new")
     if out.exists() and out.stat().st_size > 1000:
         return out
     url = f"{ELEVEN_BASE}/v1/text-to-speech/{vid}?output_format={fmt}"
@@ -259,7 +281,7 @@ def fmt_srt(t: float) -> str:
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 
-def main(ep_dir: str) -> None:
+def main(ep_dir: str, lock: bool = False) -> None:
     ep_path = (ROOT / ep_dir).resolve()
     script = json.loads((ep_path / "script.json").read_text(encoding="utf-8"))
     build = ROOT / "build" / script["episode"]
@@ -304,9 +326,9 @@ def main(ep_dir: str) -> None:
                 audio = pieces[lid]
                 source = "eleven·scene"
             elif engine == "elevenlabs":
-                mp3 = fetch_eleven(text, voice, cache, prev_text, next_text, line.get("seed"))
+                mp3 = fetch_eleven(text, voice, cache, prev_text, next_text, line.get("seed"), ep_path / "voice", lid)
                 audio = trim_silence(decode(mp3, voice.get("tempo", 1.0)))
-                source = "eleven"
+                source = "eleven·잠금" if USED.get(lid, (0, 0, ""))[2] == "locked" else "eleven"
             else:
                 mp3 = fetch_tts(text, voice.get("lang", "ko"), cache)
                 audio = trim_silence(decode(mp3, voice.get("tempo", 1.0)))
@@ -374,5 +396,27 @@ def main(ep_dir: str) -> None:
         print(f"  {s['id']:<11} {s['start']:7.2f} → {s['end']:7.2f}  ({s['end'] - s['start']:5.2f}s)")
 
 
+def lock_voice(ep_dir: str) -> None:
+    """이번 실행에서 쓴 일레븐랩스 음성을 episodes/<ep>/voice/ 에 확정본으로 저장합니다."""
+    import shutil
+    vdir = (ROOT / ep_dir).resolve() / "voice"
+    vdir.mkdir(exist_ok=True)
+    lock = {}
+    for lid, (tag, path, _) in USED.items():
+        dst = vdir / f"{lid}.mp3"
+        if Path(path).resolve() != dst.resolve():
+            shutil.copyfile(path, dst)
+        lock[lid] = tag
+    for f in vdir.glob("*.mp3"):  # 대본에서 빠진 문장의 옛 파일 정리
+        if f.stem not in lock:
+            f.unlink()
+    (vdir / "lock.json").write_text(json.dumps(lock, ensure_ascii=False, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"확정본 잠금: {len(lock)}문장 → {vdir.relative_to(ROOT)}")
+
+
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "episodes/01-parental-leave")
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    ep_arg = args[0] if args else "episodes/01-parental-leave"
+    main(ep_arg)
+    if "--lock" in sys.argv:
+        lock_voice(ep_arg)

@@ -48,11 +48,11 @@
 ## 다시 만들기
 
 ```bash
-npm install                          # Playwright (Chromium은 환경에 설치된 것을 사용)
-pip install numpy scipy soundfile    # 오디오 합성
-# ffmpeg(libx264) 필요
+bash engine/setup.sh                 # 새 세션에서 한 번: ffmpeg·Playwright·파이썬 패키지 설치 + 일레븐랩스 연결 확인
 bash engine/build.sh 01-parental-leave
 ```
+
+확정된 에피소드의 내레이션은 `episodes/<ep>/voice/`(문장별 mp3 + `lock.json`)에 잠겨 있어, 언제 다시 빌드해도 같은 목소리가 나오고 일레븐랩스를 다시 호출하지 않습니다.
 
 단계별로 돌리고 싶다면:
 
@@ -85,9 +85,9 @@ python3 engine/docs.py 01-parental-leave                     # 대본 문서 · 
    bash engine/build.sh 01-parental-leave
    ```
    일레븐랩스 사이트에서 직접 복제했다면 이름으로 찾아 저장합니다: `python3 engine/audio/eleven_clone.py --find "채널 목소리" --use-in 01-parental-leave`
-4. 새 에피소드는 `script.json`에 `"voice": {"use": "channel"}`만 넣으면 같은 목소리로 만들어집니다. 문장마다 앞뒤 문장을 함께 넘겨 억양을 잇고, 만든 음성은 `.cache/tts`에 저장돼 다시 빌드해도 과금되지 않습니다.
+4. 새 에피소드는 `script.json`에 `"voice": {"use": "channel"}`만 넣으면 같은 목소리로 만들어집니다. 문장마다 앞뒤 문장을 함께 넘겨 억양을 잇습니다. 확정한 음성은 `tts.py <ep> --lock`으로 `episodes/<ep>/voice/`에 잠급니다.
 5. 목소리 설정은 `voice.json`에서 조정합니다. 기본은 모델 `eleven_multilingual_v2`, 문장 단위(앞뒤 문장을 함께 넘겨 억양을 이음)입니다. `eleven_v3` + `"unit": "scene"`(장면 단위)도 지원하지만 인스턴트 클론에서는 목소리가 중간에 달라지는 일이 있어 쓰지 않습니다. 요금제를 해지하면 목소리는 계정에 남지만, 다시 구독하기 전까지는 쓸 수 없습니다.
-6. 목소리 일관성 검사: `python3 engine/audio/voice_check.py <에피소드>` 가 문장마다 원본 샘플과의 화자 유사도를 보여 주고, `--retake 4` 는 튀는 문장을 seed 1~4로 다시 만들어 가장 비슷한 테이크를 `script.json`(문장의 `seed`)에 저장합니다. 필요: `pip install torch resemblyzer librosa "setuptools<81"`.
+6. 목소리 일관성: 확정된 1화가 채널 기준 목소리(`voice_style.json`: 목소리·속도·억양)입니다. `voice_check.py <에피소드>`가 문장마다 기준과의 거리를 보여 주고, `--retake 6`은 기준에서 먼 문장을 여러 번 다시 만들어 가장 가까운 테이크를 고릅니다. 아래 '새 에피소드 만들기' 절차를 따릅니다.
 
 ### B. 직접 녹음
 
@@ -99,8 +99,26 @@ python3 engine/docs.py 01-parental-leave                     # 대본 문서 · 
 
 모든 에피소드는 채널 표지(`engine/web/cover.js`, 3.6초)로 시작합니다. `scenes.js` 맨 앞에 `coverScene({ n: 화수, title: '짧은 제목' })`, `script.json` 맨 앞에 `{"id": "cover", "duration": 3.6}`을 넣습니다.
 
-`episodes/<새-에피소드>/` 폴더에 `script.json`(대본), `scenes.js`(장면), `thumbnail.js`(썸네일)를 만들고 같은 명령으로 빌드합니다.
-공용 엔진은 `engine/`에 있습니다: `web/engine.js`(타임라인·애니메이션), `web/art.js`(캐릭터 일러스트), `web/styles.css`(디자인 토큰).
+`episodes/<새-에피소드>/` 폴더에 `script.json`(대본), `scenes.js`(장면), `thumbnail.js`(썸네일), `shorts.json`, `youtube.md`를 만듭니다. 1화·2화를 본보기로 씁니다.
+공용 엔진은 `engine/`에 있습니다: `web/engine.js`(타임라인·애니메이션), `web/art.js`(캐릭터 일러스트), `web/cover.js`(채널 표지), `web/styles.css`(디자인 토큰), `web/icons.js`(Lucide 아이콘).
+
+### 제작 절차 (같은 품질로 다시 만들기 위한 순서와 확인 기준)
+
+| 단계 | 할 일 | 통과 기준 |
+|---|---|---|
+| 0. 준비 | `bash engine/setup.sh` | 일레븐랩스 연결 OK |
+| 1. 사실 확인 | 최신 공식 자료(고용노동부·정책브리핑·법령)로 확인, 확인 못 한 내용은 빼거나 1350 안내 | 모든 수치에 출처, 화면에 기준일(`asOf`) |
+| 2. 대본 | 채널 구성(표지 → 훅 → 두 가지 예고 → 조건·내용 → Q&A → 신청 → 3줄 요약 → 상담·예고), '~입니다'에 '~요' 섞기, 3~4분 | CLAUDE.md 채널 규칙 |
+| 3. 발음 표기(`tts`) | 숫자는 단위와 붙여 한글(`육개월`), `일주일·이주일`, `~할수 있/없`, 약어 풀기(`초등 이학년`), 나열엔 조사, 화면에 없는 쉼표 금지 | CLAUDE.md 목소리 규칙 |
+| 4. 내레이션 | `python3 engine/audio/tts.py episodes/<ep>` | — |
+| 5. 목소리 맞추기 | `voice_check.py <ep> --retake 6` → `tts.py` → `--retake 10` → `tts.py`. 느리면 `"tempo"` | 속도·억양이 기준(1화)과 비슷, 점수 대부분 2 이하 |
+| 6. 발음 확인 | `python3 engine/audio/stt_check.py <ep>` | 오독 0 (숫자 표기 차이는 무시) |
+| 7. 장면·검토 | `node engine/render.mjs preview <ep> <초> …` 로 스틸컷 확인 | 겹침·잘림 없음, 자막과 그래픽 시각 일치 |
+| 8. 빌드 | `bash engine/build.sh <ep>` | −14 LUFS, 3~4분 |
+| 9. 전달 | 1080p 2패스 압축(30MB 이하)·쇼츠·720p 미리보기를 채팅으로 | 사용자 확인 |
+| 10. 확정 | `tts.py episodes/<ep> --lock` 후 커밋, 옵시디언 노트 업로드 | `voice/lock.json` 커밋됨 |
+
+수정 요청이 오면 그 문장만 고칩니다: 문장에 `ttsContext`(이전 발음 표기)를 두면 앞뒤 문장은 잠긴 음성을 그대로 씁니다.
 
 ## 라이선스 · 출처
 
