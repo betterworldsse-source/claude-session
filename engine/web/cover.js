@@ -1,7 +1,7 @@
 // 채널 표지 장면 "더나은 정보" — 모든 에피소드 첫 화면에 공통으로 씁니다.
 // 왼쪽: 채널의 '블록' 로고(가운데 칸이 로고 마크), 오른쪽: 채널 이름·소개, 오른쪽 아래: 가족, 왼쪽 아래: 이번 화.
 // 사용: import { coverScene } from '../../engine/web/cover.js';
-//       const cover = coverScene({ n: 1, title: '육아휴직 6개월 연장 & 6+6' });  // script.json 맨 앞에 {"id": "cover", "duration": 3.6}
+//       const cover = coverScene({ n: 1, title: '육아휴직 6개월 연장 & 6+6' });  // script.json 맨 앞에 {"id": "cover", "duration": 5.0} (3화부터; 모든 요소는 2.7초에 다 나타남)
 import { ease, P, wave, mount, enter, pop, drop, rise, icon } from './engine.js';
 import { family, blink } from './art.js';
 

@@ -56,6 +56,9 @@
       `<div class="chip" style="border:3px solid var(--red);color:var(--red);background:rgba(255,255,255,0.8)">${icon('circle-help', { size: 32, stroke: 2.4 })}헷갈리는 포인트 ${sh.n}</div>` +
       `<div class="chip ${sys[1]}">${icon(sys[2], { size: 32 })}${sys[0]}</div>`;
     document.getElementById('title').innerHTML = sh.title;
+    // 끝 버튼: 이 에피소드의 짧은 제목(script.json shortTitle) — shorts.json 항목의 "cta"가 있으면 그 문구
+    const script = await (await fetch(`../../episodes/${ep}/script.json`)).json();
+    document.querySelector('#cta div').innerHTML = `<b>전체 영상 ▶</b> ${sh.cta ?? `${script.shortTitle} 한 번에 정리`}`;
     document.getElementById('asof').textContent = `${mod.asOf} · 고용노동부 자료`;
     await start({ timeline, scenes: mod.scenes, chapters: mod.chapters, asOf: mod.asOf });
     const A = timeline.lines.find((l) => l.id === sh.answerLine).start;

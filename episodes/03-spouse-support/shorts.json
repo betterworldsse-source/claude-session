@@ -1,0 +1,6 @@
+[
+  { "id": "short1-late-birth", "scene": "qa1", "fromLine": "a1q", "fromChunk": 1, "n": 1, "sys": "leave", "title": "예정일보다<br>늦게 태어나면?", "answerLine": "a1a" },
+  { "id": "short2-early-birth", "scene": "qa2", "fromLine": "a2q", "fromChunk": 1, "n": 2, "sys": "leave", "title": "일찍 태어나면<br>남은 휴가는?", "answerLine": "a2a" },
+  { "id": "short3-split", "scene": "qa3", "fromLine": "a3q", "fromChunk": 1, "n": 3, "sys": "leave", "title": "배우자 출산휴가,<br>몇 번 나눠 쓰나?", "answerLine": "a3a" },
+  { "id": "short4-large-company", "scene": "qa4", "fromLine": "a4q", "fromChunk": 1, "n": 4, "sys": "pay", "title": "대기업이면<br>급여는?", "answerLine": "a4a" }
+]
