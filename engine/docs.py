@@ -121,10 +121,13 @@ def write_obsidian_notes(ep_dir: Path, script: dict, timeline: dict) -> None:
     name = script_note_name(ep, script)
     n = sum(len(s.get("lines", [])) for s in script["scenes"])
     dur = timeline["duration"]
+    # 확정본 음성이 잠겨 있으면(voice/lock.json) 완성, 아니면 녹음 대기
+    locked = (ep_dir / "voice" / "lock.json").exists()
+    status = "완성 (채널 목소리 확정)" if locked else "녹음 대기"
     body = [
         "---", "tags: [유튜브, 영상대본, 녹음대본]", f"에피소드: {int(ep.split('-')[0])}",
         f"제목: {script['title']}", f"기준일: {script['asOf']}", f"문장: {n}개",
-        f"예상 길이: 약 {int(dur // 60)}분 {int(dur % 60)}초", "상태: 녹음 대기", "---", "",
+        f"{'길이' if locked else '예상 길이'}: 약 {int(dur // 60)}분 {int(dur % 60)}초", f"상태: {status}", "---", "",
         f"# {script['title']} — 녹음 대본", "",
         "> [!tip] 목소리 복제 샘플을 녹음할 때",
         "> **1~10번**만 이어서 읽으면 1~2분 샘플이 됩니다. 번호 사이에 길게 쉬지 말고 자연스럽게 읽어 주세요. 자세한 방법은 [[녹음 가이드]].", "",
