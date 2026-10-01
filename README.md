@@ -131,11 +131,11 @@ python3 engine/docs.py 01-parental-leave                     # 대본 문서 · 
 | 1. 사실 확인 | 최신 공식 자료(고용노동부·정책브리핑·법령)로 확인, 확인 못 한 내용은 빼거나 1350 안내 | 모든 수치에 출처, 화면에 기준일(`asOf`) |
 | 2. 대본 | 채널 구성(표지 5초 → 훅 → 소개할 제도 예고 → 조건·내용 → Q&A → 신청 → "3줄로 요약하면 이렇습니다." + 3줄 요약 → 상담·예고), '~입니다'에 '~요' 섞기, 3~4분 | CLAUDE.md 채널 규칙 |
 | 3. 발음 표기(`tts`) | 숫자는 단위와 붙여 한글(`육개월`, `이백오십만원`, `이십일치`), `일주일·이주일`, `~할수 있/없`, 약어 풀기(`초등 이학년`), 나열엔 조사, 화면에 없는 쉼표 금지, '쓸 수 있'처럼 ㅆ+수 겹침 줄이기 | CLAUDE.md 목소리 규칙 |
-| 4. 내레이션 | `python3 engine/audio/tts.py episodes/<ep>` | — |
-| 5. 목소리 맞추기 | `voice_check.py <ep> --retake 6` → `tts.py` → `--retake 10` → `tts.py`. 느리면 `"tempo"`. 점수에 마찰음(ㅅ·ㅆ 세기·길이) 벌점 포함 | 속도·억양·마찰음이 기준(1화)과 비슷, 점수 대부분 2 이하 |
-| 6. 발음 확인 | `python3 engine/audio/stt_check.py <ep>` | 오독 0 (숫자 표기 차이는 무시) |
+| 4. 내레이션 | `python3 engine/audio/tts.py episodes/<ep>` → 새 문장이 있으면 필요한 글자 수(≈크레딧)만 알려 주고 멈춤 → 사용자 허락 후 `ELEVEN_OK=1 python3 engine/audio/tts.py episodes/<ep>` (새 문장 한 번씩) | 예상 크레딧을 사용자가 허락 |
+| 5. 목소리 맞추기 | `voice_check.py <ep>` 점수표(무료, 마찰음 벌점 포함) → 미리보기를 들은 사용자와 고칠 문장을 정해, 허락받아 `ELEVEN_OK=1 … voice_check.py <ep> --only id1,id2 --retake 3` → `tts.py`. 느리면 `"tempo"`, ㅅ이 세면 `"treble": -2` | 사용자가 듣고 OK |
+| 6. 발음 확인 | 사용자가 미리보기를 들어 확인 (일레븐랩스 음성 인식 `stt_check.py`는 분당 ~330크레딧이라 기본으로 쓰지 않음, 필요하면 허락 후 `ELEVEN_STT_OK=1`) | 오독 0 |
 | 7. 장면·검토 | `node engine/render.mjs preview <ep> <초> …` 로 스틸컷 확인 | 겹침·잘림 없음, 자막과 그래픽 시각 일치 |
-| 8. 빌드 | `bash engine/build.sh <ep>` | −14 LUFS, 3~4분 |
+| 8. 빌드 | `bash engine/build.sh <ep>` (새 문장이 남아 있으면 1단계에서 멈춤 → 허락 후 `ELEVEN_OK=1 bash engine/build.sh <ep>`) | −14 LUFS, 3~4분 |
 | 9. 전달 | 1080p 2패스 압축(30MB 이하)·쇼츠·720p 미리보기를 채팅으로 | 사용자 확인 |
 | 10. 확정 | `tts.py episodes/<ep> --lock` 후 커밋, 옵시디언 노트 업로드 | `voice/lock.json` 커밋됨 |
 

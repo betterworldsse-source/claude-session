@@ -10,6 +10,7 @@
 - tts.py 로 build/<ep>/lines 가 먼저 있어야 합니다.
 """
 import difflib
+import os
 import json
 import re
 import subprocess
@@ -40,6 +41,13 @@ def main() -> None:
     script = json.loads((ROOT / "episodes" / ep / "script.json").read_text(encoding="utf-8"))
     lines = [l for sc in script["scenes"] for l in sc.get("lines", []) if not only or l["id"] in only]
     d = ROOT / "build" / script["episode"] / "lines"
+    # 일레븐랩스 음성 인식은 분당 약 330크레딧(문장 단위로 보내면 더 듭니다) — 2026-10 크레딧 소진의 큰 원인이었습니다.
+    # 기본 발음 확인은 사용자가 미리보기를 듣는 것으로 하고, 이 확인은 허락받은 뒤 ELEVEN_STT_OK=1 일 때만 합니다.
+    import soundfile as sf
+    secs = sum(sf.info(str(d / f"{l['id']}.wav")).duration for l in lines)
+    if os.environ.get("ELEVEN_STT_OK") != "1":
+        sys.exit(f"일레븐랩스 음성 인식: {len(lines)}문장 · {secs / 60:.1f}분 ≈ {secs / 60 * 330:.0f}크레딧 이상. "
+                 "기본 발음 확인은 사용자가 듣는 것으로 합니다. 꼭 필요하면 사용자 허락 후 ELEVEN_STT_OK=1 로 실행하세요.")
     with ThreadPoolExecutor(4) as ex:
         heard = list(ex.map(lambda l: transcribe(d / f"{l['id']}.wav"), lines))
     bad = 0

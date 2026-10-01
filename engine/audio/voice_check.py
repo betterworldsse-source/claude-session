@@ -225,6 +225,12 @@ def main() -> None:
     def save():
         script_path.write_text(json.dumps(script, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
+    todo = [r for r in rows if r["off"] > args.limit and (not only or r["line"]["id"] in only)]
+    est = sum(len(spoken[order.index(r["line"]["id"])]) for r in todo) * args.retake
+    print(f"다시 만들기 대상 {len(todo)}문장 × 최대 {args.retake}테이크 ≈ 최대 {est}크레딧")
+    if not tts.PAID_OK:
+        sys.exit("크레딧이 드는 작업이라 멈췄습니다. 사용자에게 예상 크레딧을 알리고 허락받은 뒤 ELEVEN_OK=1 을 붙여 다시 실행하세요.")
+
     for r in rows:
         if r["off"] <= args.limit or (only and r["line"]["id"] not in only):
             continue

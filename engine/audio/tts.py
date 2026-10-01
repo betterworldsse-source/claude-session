@@ -70,6 +70,14 @@ def fetch_tts(text: str, lang: str, cache_dir: Path) -> Path:
 
 
 ELEVEN_BASE = os.environ.get("ELEVENLABS_BASE_URL", "https://api.elevenlabs.io")
+# 크레딧이 드는 새 생성은 사용자 허락을 받은 뒤에만 합니다(2026-10 크레딧 소진 이후 규칙).
+# ELEVEN_OK=1 이 없으면 잠금·캐시에 없는 문장을 만들지 않고, 필요한 글자 수(≈크레딧)만 알려 주고 멈춥니다.
+PAID_OK = os.environ.get("ELEVEN_OK") == "1"
+PENDING = []  # (문장 id, 글자 수)
+
+
+class NeedCredits(Exception):
+    """허락(ELEVEN_OK=1) 없이 새로 만들어야 하는 요청."""
 ELEVEN_SETUP = ("설정: 작업 환경 편집 → API credentials → Add credential "
                 "(Allowed websites: api.elevenlabs.io, 헤더 이름 xi-api-key, 접두사 없음, 값: API 키). "
                 "또는 환경 변수 ELEVENLABS_API_KEY + 네트워크 허용(api.elevenlabs.io). 설정은 새 세션부터 적용됩니다.")
@@ -113,6 +121,9 @@ def fetch_eleven(text: str, voice: dict, cache_dir: Path, prev_text: str = "", n
         USED[lid] = (tag, out, "new")
     if out.exists() and out.stat().st_size > 1000:
         return out
+    if not PAID_OK:
+        PENDING.append((lid or text[:12], len(text)))
+        raise NeedCredits(lid)
     url = f"{ELEVEN_BASE}/v1/text-to-speech/{vid}?output_format={fmt}"
     data = json.dumps(body, ensure_ascii=False).encode("utf-8")
     for attempt in range(5):
@@ -160,6 +171,9 @@ def fetch_eleven_scene(texts: list, voice: dict, cache_dir: Path, seed=None) -> 
     tag = hashlib.sha1(json.dumps({"v": vid, "b": body, "f": fmt, "ts": 1}, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:20]
     out = cache_dir / f"eleven_scene_{tag}.mp3"
     align_path = cache_dir / f"eleven_scene_{tag}.json"
+    if not (out.exists() and align_path.exists()) and not PAID_OK:
+        PENDING.append(("scene", len(text)))
+        raise NeedCredits("scene")
     if not (out.exists() and align_path.exists()):
         url = f"{ELEVEN_BASE}/v1/text-to-speech/{vid}/with-timestamps?output_format={fmt}"
         data = json.dumps(body, ensure_ascii=False).encode("utf-8")
@@ -308,7 +322,11 @@ def main(ep_dir: str, lock: bool = False) -> None:
         if scene_unit and scene.get("lines"):
             # 장면 전체를 한 번에 읽힌 뒤 문장 사이 무음의 가운데에서 자릅니다
             texts = [l["tts"].replace("|", " ") for l in scene["lines"]]
-            mp3, spans = fetch_eleven_scene(texts, voice, cache, scene.get("seed"))
+            try:
+                mp3, spans = fetch_eleven_scene(texts, voice, cache, scene.get("seed"))
+            except NeedCredits:
+                idx += len(scene["lines"])
+                continue
             tempo = voice.get("tempo", 1.0)
             full = decode(mp3, tempo, voice.get("treble", 0.0))
             cuts = [0.0] + [(spans[i][1] + spans[i + 1][0]) / 2 for i in range(len(spans) - 1)] + [len(full) / SR * tempo]
@@ -329,7 +347,10 @@ def main(ep_dir: str, lock: bool = False) -> None:
                 audio = pieces[lid]
                 source = "eleven·scene"
             elif engine == "elevenlabs":
-                mp3 = fetch_eleven(text, voice, cache, prev_text, next_text, line.get("seed"), ep_path / "voice", lid)
+                try:
+                    mp3 = fetch_eleven(text, voice, cache, prev_text, next_text, line.get("seed"), ep_path / "voice", lid)
+                except NeedCredits:
+                    continue
                 audio = trim_silence(decode(mp3, voice.get("tempo", 1.0), voice.get("treble", 0.0)))
                 source = "eleven·잠금" if USED.get(lid, (0, 0, ""))[2] == "locked" else "eleven"
             else:
@@ -340,6 +361,12 @@ def main(ep_dir: str, lock: bool = False) -> None:
             sf.write(build / "lines" / f"{lid}.wav", audio, SR, subtype="PCM_24")
             clips[lid] = audio
             print(f"{lid:>4} {len(audio) / SR:5.2f}s [{source}] {line['text'].replace('|', ' ')}")
+
+    if PENDING:
+        total = sum(n for _, n in PENDING)
+        print(f"\n일레븐랩스로 새로 만들어야 하는 문장 {len(PENDING)}개 · {total}글자(≈ {total}크레딧): "
+              + ", ".join(i for i, _ in PENDING))
+        sys.exit("크레딧이 드는 작업이라 멈췄습니다. 사용자에게 예상 크레딧을 알리고 허락받은 뒤 ELEVEN_OK=1 을 붙여 다시 실행하세요.")
 
     # 타임라인 계산
     t = 0.0
