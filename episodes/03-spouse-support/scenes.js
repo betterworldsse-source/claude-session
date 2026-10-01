@@ -276,7 +276,7 @@ const days = {
       </div>
       <div class="card" data-r="R" style="left:${RX}px;top:${Y}px;width:${RW}px;height:${HH}px">
         <div class="abs row" data-r="g0" style="left:40px;top:34px;gap:18px">${badge('building-2', 'blue', 96)}<div class="col" style="gap:2px"><div style="font-size:38px;font-weight:840">우선지원대상기업</div><div style="font-size:26px;font-weight:650;color:var(--ink-3)">중소기업 등</div></div></div>
-        <div class="abs row" data-r="g1" style="left:40px;top:172px;gap:12px"><div class="chip blue" style="height:60px;font-size:30px;padding:0 24px">${icon('hand-coins', { size: 32 })}20일 치 급여를 정부가 지원</div></div>
+        <div class="abs row" data-r="g1" style="left:40px;top:172px;gap:12px"><div class="chip blue" style="height:60px;font-size:30px;padding:0 24px">${icon('hand-coins', { size: 32 })}20일치 급여를 정부가 지원</div></div>
         <div class="abs row" data-r="g2" style="left:40px;top:262px;gap:12px;align-items:baseline;color:var(--gold-2)"><span style="font-size:34px;font-weight:800;color:var(--ink-2)">최대</span><span class="disp" style="font-size:112px;line-height:1.1">약 168만</span><span class="disp" style="font-size:56px">원</span></div>
         <div class="abs" data-r="g3" style="left:40px;top:414px;font-size:24px;font-weight:620;color:var(--ink-3)">하루 상한 8만 4,210원 × 20일 · 2026년 기준</div>
       </div>
@@ -318,7 +318,7 @@ const pregnant = {
         { html: '<span class="hl-gold">임신 중 육아휴직</span>', at: c.in + 0.1 },
         { html: '원래 아빠 육아휴직은 <span class="hl-coral">출생 후</span>부터', at: C1b },
         { html: '아내에게 <span class="hl-gold">유산·조산 위험</span>이 있으면', at: C2 },
-        { html: '<span class="hl-gold">출산 전</span>에도 쓸 수 있어요', at: C2b },
+        { html: '<span class="hl-gold">출산 전</span>에도 육아휴직 가능', at: C2b },
         { html: '<span class="hl-blue">고위험 임신 진단</span>을 받은 날부터', at: C3 },
         { html: '기간에선 <span class="hl-coral">빠지고</span>, 횟수엔 <span class="hl-mint">안 들어가요</span>', at: C4 },
       ],
@@ -336,7 +336,7 @@ const pregnant = {
       <div class="abs" data-r="r2L" style="left:190px;top:${BY + 330}px;font-size:34px;font-weight:840;color:var(--ink-2)">이제</div>
       ${seg('p1', M, BY + 130, 520, 84, MINT_BG, '0 22px 22px 0', 'left')}
       <div class="abs row" data-r="p1t" style="left:${M + 30}px;top:${BY + 150}px;gap:10px;font-size:32px;font-weight:840;color:#fff">${icon('user-check', { size: 34 })}아빠 육아휴직</div>
-      <div class="abs row center" data-r="lk" style="left:${Z0 + 150}px;top:${BY + 128}px;width:300px;height:88px;gap:12px;border-radius:22px;border:4px dashed rgba(31,42,55,0.2);color:var(--ink-3);font-size:30px;font-weight:800">${icon('lock', { size: 34 })}쓸 수 없음</div>
+      <div class="abs row center" data-r="lk" style="left:${Z0 + 150}px;top:${BY + 128}px;width:300px;height:88px;gap:12px;border-radius:22px;border:4px dashed rgba(31,42,55,0.2);color:var(--ink-3);font-size:30px;font-weight:800">${icon('lock', { size: 34 })}사용 불가</div>
       <div class="abs chip coral" data-r="risk" style="left:${Z0 + 40}px;top:${BY + 236}px;height:58px;font-size:28px;padding:0 22px;background:var(--coral);color:#fff">${icon('triangle-alert', { size: 30 })}유산·조산 위험</div>
       ${seg('p2', M - 380, BY + 310, 380, 84, GOLD_BG, '22px 0 0 22px', 'right')}
       ${seg('p2b', M, BY + 310, 520, 84, MINT_BG, '0 22px 22px 0', 'left')}
@@ -411,8 +411,8 @@ const loss = {
       y: 150,
       lines: [
         { html: '배우자 <span class="hl-lav">유산·사산휴가</span> 신설', at: c.in + 0.1 },
-        { html: '힘든 시기, <span class="hl-lav">아내 곁</span>을 지킬 수 있도록', at: D1b },
-        { html: '남편도 <span class="hl-lav">5일</span>까지', at: D2b },
+        { html: '힘든 시기, <span class="hl-lav">아내 곁</span>을 지키도록', at: D1b },
+        { html: '남편에게도 최대 <span class="hl-lav">5일</span>', at: D2b },
         { html: '처음 <span class="hl-gold">3일은 유급</span>', at: D2c },
         { html: '그날부터 <span class="hl-coral">20일 안에</span> 신청', at: D3 },
       ],
@@ -435,7 +435,7 @@ const loss = {
         <div class="chip" data-r="k1" style="height:74px;font-size:33px;padding:0 30px;background:var(--ink);color:#fff;box-shadow:var(--shadow)">${icon('calendar-clock', { size: 36 })}유산·사산한 날부터 20일 안에 신청</div>
       </div>
       <div class="abs row" style="left:0;top:812px;width:1920px;justify-content:center">
-        <div class="chip blue" data-r="k2" style="height:66px;font-size:30px;padding:0 28px">${icon('building-2', { size: 32 })}우선지원대상기업: 3일 치 급여를 정부가 지원 (통상임금 100%)</div>
+        <div class="chip blue" data-r="k2" style="height:66px;font-size:30px;padding:0 28px">${icon('building-2', { size: 32 })}우선지원대상기업: 3일치 급여를 정부가 지원 (통상임금 100%)</div>
       </div>`);
     const tiles = dayTiles(root, { x: TX, y: TY, n: 5, size: TS, gap: TG, cls: 'empty', ref: 't', radius: 30 });
     c.sfx(c.in + 0.2, 'pop', 0.35);
@@ -558,12 +558,12 @@ const qa2 = {
   },
 };
 
-// ------------------------------------------------------------------ 8. 헷갈리는 포인트 3: 몇 번까지 나눠 쓸 수 있나? — 세 번 나눠 최대 네 번
+// ------------------------------------------------------------------ 8. 헷갈리는 포인트 3: 몇 번까지 나눠도 되나? — 최대 세 번 나눠 네 번
 const qa3 = {
   id: 'qa3',
   build(root, c) {
     const Qa = c.at('a3q', 1), A = c.at('a3a'), A2 = c.at('a3a', 1), A3 = c.at('a3a', 2);
-    const head = qaHead(root, { n: 3, sys: 'leave', q: '몇 번까지 나눠 쓸 수 있을까?', tChip: c.in, tQ: Qa });
+    const head = qaHead(root, { n: 3, sys: 'leave', q: '몇 번까지 나눠도 될까?', tChip: c.in, tQ: Qa });
     const S = 58, G = 8, GAP = 56, Y = 610;
     const GROUPS = [8, 5, 4, 3];
     const W0 = 20 * (S + G) - G + 3 * GAP, X0 = (1920 - W0) / 2;
@@ -583,7 +583,7 @@ const qa3 = {
       ${[0, 1, 2, 3].map((g) => `<div class="abs chip gold" data-r="gl${g}" style="left:${gx(g) + gw(g) / 2 - 62}px;top:${Y - 76}px;height:52px;font-size:26px;padding:0 18px;background:var(--gold);color:#fff">${g + 1}번째 · ${GROUPS[g]}일</div>`).join('')}
       ${[1, 2, 3].map((g) => `<div class="abs" data-r="sc${g}" style="left:${gx(g) - GAP / 2 - 22}px;top:${Y + 8}px;color:#E4553E">${icon('scissors', { size: 44, stroke: 2.4 })}</div>`).join('')}
       <div class="abs row" style="left:0;top:${Y + 104}px;width:1920px;justify-content:center">
-        <div class="chip mint" data-r="all" style="height:62px;font-size:30px;padding:0 26px">${icon('circle-check', { size: 32 })}출산 전에 20일을 다 써도 OK</div>
+        <div class="chip mint" data-r="all" style="height:62px;font-size:30px;padding:0 26px">${icon('circle-check', { size: 32 })}출산 전에 20일을 모두 써도 OK</div>
       </div>`);
     const tiles = dayTiles(root, { x: 0, y: Y, n: 20, size: S, gap: G, cls: 'gold', ref: 'd', radius: 14 });
     for (let i = 0; i < 8; i++) c.sfx(Qa + 0.3 + i * 0.08, 'tick', 0.2);
@@ -655,9 +655,9 @@ const steps = {
     const hd = header(root, { y: 140, lines: [{ html: '신청은 <span class="hl-blue">이렇게</span>', at: c.in + 0.05 }] });
     const W = 480, H = 470, X = [150, 720, 1290], Y = 290;
     const items = [
-      { color: 'blue', title: '회사에 신청', at: c.at('p1'), body: `<div class="abs" style="left:${(W - 120) / 2}px;top:128px">${badge('file-text', 'blue', 120)}</div><div class="abs" style="left:0;top:270px;width:${W}px;text-align:center;font-size:30px;font-weight:720;color:var(--ink-2);line-height:1.5">출산예정일과<br><b style="font-size:40px;color:var(--blue-2)">쓸 날짜</b>를 적어서</div>` },
+      { color: 'blue', title: '회사에 신청', at: c.at('p1'), body: `<div class="abs" style="left:${(W - 120) / 2}px;top:128px">${badge('file-text', 'blue', 120)}</div><div class="abs" style="left:0;top:270px;width:${W}px;text-align:center;font-size:30px;font-weight:720;color:var(--ink-2);line-height:1.5">출산예정일과<br><b style="font-size:40px;color:var(--blue-2)">휴가 날짜</b>를 적어서</div>` },
       { color: 'gold', title: '임신 중 육아휴직', at: P2, body: `<div class="abs row" style="left:44px;top:132px;gap:16px">${badge('stethoscope', 'gold', 96)}<div style="font-size:32px;font-weight:800;color:var(--ink-2)">진단서와 함께</div></div><div class="abs col" style="left:44px;top:260px;gap:6px"><div data-r="d7" class="disp" style="font-size:66px;color:var(--gold-2);line-height:1.1">7일 전까지</div><div data-r="d30" style="font-size:27px;font-weight:700;color:var(--ink-3)">보통 육아휴직은 <s>30일 전</s></div></div>` },
-      { color: 'mint', title: '급여 신청', at: P3, body: `<div class="abs" style="left:${(W - 120) / 2}px;top:128px">${badge('laptop', 'mint', 120)}</div><div class="abs" style="left:0;top:262px;width:${W}px;text-align:center;font-size:28px;font-weight:720;color:var(--ink-2);line-height:1.5">우선지원대상기업은<br>휴가를 쓴 뒤<br><b class="disp" style="font-size:52px;color:var(--mint-2)">고용24</b></div>` },
+      { color: 'mint', title: '급여 신청', at: P3, body: `<div class="abs" style="left:${(W - 120) / 2}px;top:128px">${badge('laptop', 'mint', 120)}</div><div class="abs" style="left:0;top:262px;width:${W}px;text-align:center;font-size:28px;font-weight:720;color:var(--ink-2);line-height:1.5">우선지원대상기업은<br>휴가를 사용한 뒤<br><b class="disp" style="font-size:52px;color:var(--mint-2)">고용24</b></div>` },
     ];
     const card = (k, i) => `
       <div class="abs" data-r="s${i}" style="left:${X[i]}px;top:${Y}px;width:${W}px;height:${H}px">
@@ -748,9 +748,9 @@ const outro = {
       </div>
       <div class="abs chip gold" data-r="nx" style="left:150px;top:210px;height:62px;font-size:32px;padding:0 26px;background:var(--gold);color:#fff">${icon('bell', { size: 32 })}다음 영상</div>
       <div class="abs disp" data-r="nt" style="left:150px;top:300px;font-size:112px">근로시간 단축 <span class="hl-gold">두 가지</span></div>
-      <div class="abs" data-r="ns" style="left:154px;top:450px;font-size:36px;font-weight:700;color:var(--ink-2)">임신기·육아기, 월급을 지키면서 덜 일하는 방법</div>
+      <div class="abs" data-r="ns" style="left:154px;top:450px;font-size:36px;font-weight:700;color:var(--ink-2)">임신기·육아기 — 건강한 임신과 출산, 육아를 돕는 제도</div>
       <div class="abs" data-r="w1" style="left:1500px;top:250px">${badge('clock', 'blue', 150)}</div>
-      <div class="abs" data-r="w2" style="left:1300px;top:280px">${badge('briefcase', 'coral', 130)}</div>
+      <div class="abs" data-r="w2" style="left:1300px;top:280px">${badge('heart', 'coral', 130)}</div>
       <div class="abs" data-r="fam" style="left:150px;top:560px">${family(420)}</div>
       <div class="abs row" data-r="btns" style="left:700px;top:660px;gap:28px">
         <div class="row" data-r="sub" style="gap:14px;height:92px;padding:0 42px;border-radius:46px;background:#F0525A;color:#fff;font-size:40px;font-weight:840;box-shadow:0 16px 36px rgba(240,82,90,0.3)">${icon('bell', { size: 42, stroke: 2.4 })}<span data-r="subTxt">구독</span></div>

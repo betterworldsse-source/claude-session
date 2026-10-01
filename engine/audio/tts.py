@@ -208,8 +208,9 @@ def resolve_voice(voice: dict) -> dict:
     return voice
 
 
-def decode(path: Path, tempo: float) -> np.ndarray:
-    """오디오 파일을 48kHz mono float32로 디코딩하면서 속도·톤 보정을 적용."""
+def decode(path: Path, tempo: float, treble: float = 0.0) -> np.ndarray:
+    """오디오 파일을 48kHz mono float32로 디코딩하면서 속도·톤 보정을 적용.
+    treble: 6kHz 위 고역 조절(dB). ㅅ·ㅆ 마찰음이 세게 들리면 에피소드 voice에 "treble": -2 처럼 둡니다(1·2화는 0)."""
     filters = [f"aresample={SR}"]
     if abs(tempo - 1.0) > 1e-3:
         filters.append(f"atempo={tempo:.4f}")
@@ -219,6 +220,8 @@ def decode(path: Path, tempo: float) -> np.ndarray:
         "equalizer=f=3200:t=q:w=1.2:g=2.0",  # 발음 명료도
         "acompressor=threshold=-20dB:ratio=2.5:attack=8:release=120:makeup=2",
     ]
+    if abs(treble) > 1e-3:
+        filters.append(f"highshelf=f=6000:g={treble:.1f}")
     cmd = [
         "ffmpeg", "-v", "error", "-i", str(path), "-ac", "1",
         "-af", ",".join(filters), "-f", "f32le", "-",
@@ -307,7 +310,7 @@ def main(ep_dir: str, lock: bool = False) -> None:
             texts = [l["tts"].replace("|", " ") for l in scene["lines"]]
             mp3, spans = fetch_eleven_scene(texts, voice, cache, scene.get("seed"))
             tempo = voice.get("tempo", 1.0)
-            full = decode(mp3, tempo)
+            full = decode(mp3, tempo, voice.get("treble", 0.0))
             cuts = [0.0] + [(spans[i][1] + spans[i + 1][0]) / 2 for i in range(len(spans) - 1)] + [len(full) / SR * tempo]
             for i, l in enumerate(scene["lines"]):
                 a, b = int(cuts[i] / tempo * SR), int(cuts[i + 1] / tempo * SR)
@@ -327,7 +330,7 @@ def main(ep_dir: str, lock: bool = False) -> None:
                 source = "eleven·scene"
             elif engine == "elevenlabs":
                 mp3 = fetch_eleven(text, voice, cache, prev_text, next_text, line.get("seed"), ep_path / "voice", lid)
-                audio = trim_silence(decode(mp3, voice.get("tempo", 1.0)))
+                audio = trim_silence(decode(mp3, voice.get("tempo", 1.0), voice.get("treble", 0.0)))
                 source = "eleven·잠금" if USED.get(lid, (0, 0, ""))[2] == "locked" else "eleven"
             else:
                 mp3 = fetch_tts(text, voice.get("lang", "ko"), cache)
