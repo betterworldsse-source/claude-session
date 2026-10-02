@@ -15,7 +15,7 @@
   "scenes": [
     {
       "id": "cover",
-      "duration": 3.6
+      "duration": 5.0
     },
     {
       "id": "intro",

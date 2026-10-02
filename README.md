@@ -120,7 +120,7 @@ python3 engine/docs.py 01-parental-leave                     # 대본 문서 · 
 
 ## 새 에피소드 만들기
 
-모든 에피소드는 채널 표지(`engine/web/cover.js`)로 시작합니다. `scenes.js` 맨 앞에 `coverScene({ n: 화수, title: '짧은 제목' })`, `script.json` 맨 앞에 `{"id": "cover", "duration": 5.0}`을 넣습니다(3화부터 5초 — 완성된 표지가 약 2초 보임. 1·2화는 3.6초).
+모든 에피소드는 채널 표지(`engine/web/cover.js`)로 시작합니다. `scenes.js` 맨 앞에 `coverScene({ n: 화수, title: '짧은 제목' })`, `script.json` 맨 앞에 `{"id": "cover", "duration": 5.0}`을 넣습니다(5초 — 완성된 표지가 약 2초 보임. 3화부터 적용, 2화도 5초로 다시 만듦(10/2). 1화는 3.6초).
 
 `episodes/<새-에피소드>/` 폴더에 `script.json`(대본), `scenes.js`(장면), `thumbnail.js`(썸네일), `shorts.json`, `youtube.md`를 만듭니다. 1화·2화를 본보기로 씁니다.
 공용 엔진은 `engine/`에 있습니다: `web/engine.js`(타임라인·애니메이션), `web/art.js`(캐릭터 일러스트), `web/cover.js`(채널 표지), `web/styles.css`(디자인 토큰), `web/icons.js`(Lucide 아이콘).
