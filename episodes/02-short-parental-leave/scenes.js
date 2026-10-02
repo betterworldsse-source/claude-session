@@ -8,7 +8,7 @@ import { avatar, family, blink, coins, baby } from '../../engine/web/art.js';
 export const asOf = '2026년 9월 기준';
 
 export const chapters = {
-  1: { label: '1', sub: '쓸 수 있는 조건', cardChip: '첫 번째', title: '쓸 수 있는 조건', cardSub: '누가, 언제 쓸 수 있을까', short: '조건', color: 'mint', icon: 'user-check', card: ['#2DBFA4', '#138C78'] },
+  1: { label: '1', sub: '쓸 수 있는 조건', cardChip: '첫 번째', title: '쓸 수 있는 조건', cardSub: '누가, 언제 사용할 수 있을까', short: '조건', color: 'mint', icon: 'user-check', card: ['#2DBFA4', '#138C78'] },
   2: { label: '2', sub: '쓰는 방법과 급여', cardChip: '두 번째', title: '쓰는 방법과 급여', cardSub: '1주·2주, 얼마를 받을까', short: '급여', color: 'gold', icon: 'coins', card: ['#F9A12B', '#E0700A'] },
   3: { label: '3', sub: '헷갈리는 포인트 4가지', cardChip: '꼭 짚고 갈 것', title: '헷갈리는 포인트', cardSub: '자주 묻는 질문 4가지', short: '포인트', color: 'coral', icon: 'circle-help', card: ['#FF8C74', '#E4553E'] },
   4: { label: '4', sub: '신청 방법', cardChip: '마지막 체크', title: '신청 방법', cardSub: '사유별 기한 → 회사 → 고용24', short: '신청', color: 'blue', icon: 'clipboard-check', card: ['#5B9BFA', '#2F6FE0'] },
@@ -362,7 +362,7 @@ const pay = {
       y: 150,
       lines: [
         { html: '급여는 <span class="hl-gold">쉰 날짜만큼</span>', at: c.in + 0.1 },
-        { html: '처음 쓰면 <span class="hl-gold">통상임금 100%</span>', at: Y2 },
+        { html: '처음이면 <span class="hl-gold">통상임금 전액</span>', at: Y2 },
         { html: '2주면 약 <span class="hl-gold">110만~120만 원</span>', at: Y3b },
       ],
     });
@@ -375,7 +375,7 @@ const pay = {
       </div>
       <div class="card" data-r="R" style="left:${RX}px;top:${Y}px;width:${RW}px;height:${HH}px">
         <div class="abs row" style="left:40px;top:34px;gap:14px;font-size:34px;font-weight:820">${icon('coins', { size: 38 })}첫 육아휴직 기준</div>
-        <div class="abs row" data-r="g1" style="left:40px;top:110px;gap:14px"><div class="chip gold" style="height:62px;font-size:32px;padding:0 24px">통상임금 100%</div><div class="chip gold" style="height:62px;font-size:32px;padding:0 24px">월 상한 250만 원</div></div>
+        <div class="abs row" data-r="g1" style="left:40px;top:110px;gap:14px"><div class="chip gold" style="height:62px;font-size:32px;padding:0 24px">통상임금 전액(100%)</div><div class="chip gold" style="height:62px;font-size:32px;padding:0 24px">월 상한 250만 원</div></div>
         <div class="abs" data-r="g2" style="left:40px;top:212px;font-size:28px;font-weight:700;color:var(--ink-3)">통상임금 월 250만 원 이상 · 2주 쉬면</div>
         <div class="abs row" data-r="g3" style="left:40px;top:258px;gap:12px;align-items:baseline;color:var(--gold-2)"><span class="disp" style="font-size:56px">약</span><span class="disp" style="font-size:104px;line-height:1.1">110만~120만</span><span class="disp" style="font-size:56px">원</span></div>
         <div class="abs" data-r="g4" style="left:40px;top:404px;font-size:23px;font-weight:620;color:var(--ink-3)">그 달의 날짜 수에 따라 금액이 조금씩 다릅니다</div>
@@ -416,7 +416,7 @@ const qa1 = {
   id: 'qa1',
   build(root, c) {
     const Qa = c.at('a1q', 1), A = c.at('a1a'), A2 = c.at('a1a', 1), A3 = c.at('a1a', 2);
-    const head = qaHead(root, { n: 1, sys: 'use', q: '1주씩 두 번 나눠 쓰기?', tChip: c.in, tQ: Qa });
+    const head = qaHead(root, { n: 1, sys: 'use', q: '1주씩 두 번 나눠도 될까?', tChip: c.in, tQ: Qa });
     const S = 50, G = 8, X = 480;
     const r = mount(root, `
       <div class="abs disp" data-r="ans" style="left:150px;top:352px;font-size:86px;color:var(--red)">아닙니다, 한 번에 이어서!</div>
@@ -488,7 +488,7 @@ const qa3 = {
   id: 'qa3',
   build(root, c) {
     const Qa = c.at('a3q', 1), A = c.at('a3a'), A2 = c.at('a3a', 1);
-    const head = qaHead(root, { n: 3, sys: 'cond', q: '방학이면 언제든 쓸 수 있을까?', tChip: c.in, tQ: Qa });
+    const head = qaHead(root, { n: 3, sys: 'cond', q: '방학이면 언제든 가능할까?', tChip: c.in, tQ: Qa });
     const BX = 420, BW = 1000, Y = 560;
     const r = mount(root, `
       <div class="abs disp" data-r="ans" style="left:150px;top:352px;font-size:80px;color:var(--mint-2)">휴직 기간 <span style="color:var(--gold-2)">전체</span>가 방학 안에</div>
