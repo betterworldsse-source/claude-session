@@ -74,6 +74,7 @@ ELEVEN_BASE = os.environ.get("ELEVENLABS_BASE_URL", "https://api.elevenlabs.io")
 # ELEVEN_OK=1 이 없으면 잠금·캐시에 없는 문장을 만들지 않고, 필요한 글자 수(≈크레딧)만 알려 주고 멈춥니다.
 PAID_OK = os.environ.get("ELEVEN_OK") == "1"
 PENDING = []  # (문장 id, 글자 수)
+LINT_BLOCK = []  # (문장 id, 대본 검사 오류) — 오류가 있는 문장은 새로 만들지 않습니다(script_lint.py)
 
 
 class NeedCredits(Exception):
@@ -88,7 +89,7 @@ USED = {}  # 이번 실행에서 쓴 문장별 (tag, mp3 경로) — --lock 이 
 
 
 def fetch_eleven(text: str, voice: dict, cache_dir: Path, prev_text: str = "", next_text: str = "", seed=None,
-                 lock_dir: Path = None, lid: str = None) -> Path:
+                 lock_dir: Path = None, lid: str = None, lint_errors: list = None) -> Path:
     """일레븐랩스 text-to-speech 로 한 문장을 만듭니다. 앞뒤 문장을 함께 넘겨 억양이 이어지게 합니다.
     lock_dir(episodes/<ep>/voice)에 같은 요청의 확정본이 있으면 그 파일을 씁니다."""
     key = os.environ.get("ELEVENLABS_API_KEY", "")  # 없으면 작업 환경의 API 자격 증명이 요청에 키를 붙입니다
@@ -121,6 +122,9 @@ def fetch_eleven(text: str, voice: dict, cache_dir: Path, prev_text: str = "", n
         USED[lid] = (tag, out, "new")
     if out.exists() and out.stat().st_size > 1000:
         return out
+    if lint_errors:  # 사용자가 지적했던 문제가 남아 있으면 크레딧을 쓰지 않습니다
+        LINT_BLOCK.append((lid or text[:12], lint_errors))
+        raise NeedCredits(lid)
     if not PAID_OK:
         PENDING.append((lid or text[:12], len(text)))
         raise NeedCredits(lid)
@@ -310,6 +314,11 @@ def main(ep_dir: str, lock: bool = False) -> None:
     voice = resolve_voice(script["voice"])
     engine = voice.get("engine", "google-translate-tts")
     timing = script["timing"]
+    import script_lint  # 사용자 지적 사항 자동 검사(크레딧 0)
+    lint = script_lint.lint_episode(script)["lines"]
+    n_err = sum(len(e) for e, _ in lint.values())
+    n_warn = sum(len(w) for _, w in lint.values())
+    print(f"대본 검사: 오류 {n_err} · 주의 {n_warn} (자세히: python3 engine/audio/script_lint.py {Path(ep_dir).name})")
     clips = {}
     spoken_all = [l["tts"].replace("|", " ") for sc in script["scenes"] for l in sc.get("lines", [])]
     # 앞뒤 문장에 넘기는 글: "ttsContext"가 있으면 그것을 씁니다(한 문장만 고칠 때 이웃 문장의 테이크를 그대로 두기 위함)
@@ -348,7 +357,8 @@ def main(ep_dir: str, lock: bool = False) -> None:
                 source = "eleven·scene"
             elif engine == "elevenlabs":
                 try:
-                    mp3 = fetch_eleven(text, voice, cache, prev_text, next_text, line.get("seed"), ep_path / "voice", lid)
+                    mp3 = fetch_eleven(text, voice, cache, prev_text, next_text, line.get("seed"), ep_path / "voice", lid,
+                                       lint_errors=lint.get(lid, ([], []))[0])
                 except NeedCredits:
                     continue
                 audio = trim_silence(decode(mp3, voice.get("tempo", 1.0), voice.get("treble", 0.0)))
@@ -362,6 +372,12 @@ def main(ep_dir: str, lock: bool = False) -> None:
             clips[lid] = audio
             print(f"{lid:>4} {len(audio) / SR:5.2f}s [{source}] {line['text'].replace('|', ' ')}")
 
+    if LINT_BLOCK:
+        print("\n대본 검사 오류가 있어 만들지 않은 문장:")
+        for lid, errs in LINT_BLOCK:
+            for m in errs:
+                print(f"  ✗ {lid}: {m}")
+        sys.exit("script.json 의 발음 표기(tts)를 고친 뒤 다시 실행하세요. (python3 engine/audio/script_lint.py 로 확인)")
     if PENDING:
         total = sum(n for _, n in PENDING)
         print(f"\n일레븐랩스로 새로 만들어야 하는 문장 {len(PENDING)}개 · {total}글자(≈ {total}크레딧): "
