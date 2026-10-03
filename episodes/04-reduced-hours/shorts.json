@@ -1,0 +1,6 @@
+[
+  {"id": "short1-mid-pregnancy", "scene": "qa1", "fromLine": "a1q", "fromChunk": 1, "n": 1, "sys": "preg", "title": "임신 13~31주에는<br>단축이 안 될까?", "answerLine": "a1a"},
+  {"id": "short2-both-parents", "scene": "qa2", "fromLine": "a2q", "fromChunk": 1, "n": 2, "sys": "child", "title": "엄마·아빠<br>동시에 단축?", "answerLine": "a2a"},
+  {"id": "short3-after-leave", "scene": "qa3", "fromLine": "a3q", "fromChunk": 1, "n": 3, "sys": "child", "title": "육아휴직 다 쓰면<br>단축은?", "answerLine": "a3a"},
+  {"id": "short4-no-substitute", "scene": "qa4", "fromLine": "a4q", "fromChunk": 1, "n": 4, "sys": "child", "title": "대체인력 없다며<br>거절하면?", "answerLine": "a4a"}
+]

@@ -1,0 +1,6 @@
+[
+  {"id": "short1-husband", "scene": "qa1", "fromLine": "a1q", "fromChunk": 1, "n": 1, "sys": "leave", "title": "남편도<br>사용 가능할까?", "answerLine": "a1a"},
+  {"id": "short2-test-day", "scene": "qa2", "fromLine": "a2q", "fromChunk": 1, "n": 2, "sys": "leave", "title": "검사·주사 맞는 날도<br>될까?", "answerLine": "a2a"},
+  {"id": "short3-large-company", "scene": "qa3", "fromLine": "a3q", "fromChunk": 1, "n": 3, "sys": "pay", "title": "대기업이면<br>급여는?", "answerLine": "a3a"},
+  {"id": "short4-penalty", "scene": "qa4", "fromLine": "a4q", "fromChunk": 1, "n": 4, "sys": "leave", "title": "회사가<br>불이익을 주면?", "answerLine": "a4a"}
+]
