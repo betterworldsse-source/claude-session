@@ -69,7 +69,7 @@
       "id": "what",
       "chapter": 1,
       "leadIn": 1.25,
-      "ytChapter": "① 쓸 수 있는 조건",
+      "ytChapter": "① 사용 조건: 자녀 나이 · 사유 4가지",
       "lines": [
         {
           "id": "w1",
@@ -116,7 +116,7 @@
       "id": "rules",
       "chapter": 2,
       "leadIn": 1.25,
-      "ytChapter": "② 쓰는 방법과 급여",
+      "ytChapter": "② 사용 방법과 급여: 2주면 얼마?",
       "lines": [
         {
           "id": "r1",
@@ -246,7 +246,7 @@
       "id": "steps",
       "chapter": 4,
       "leadIn": 1.25,
-      "ytChapter": "④ 신청 방법",
+      "ytChapter": "④ 신청 방법: 방학은 30일 전 · 급하면 당일",
       "lines": [
         {
           "id": "p1",
