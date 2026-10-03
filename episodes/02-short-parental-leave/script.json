@@ -20,7 +20,7 @@
     {
       "id": "intro",
       "leadIn": 0.45,
-      "ytChapter": "오늘의 주제: 1주·2주 단기 육아휴직",
+      "ytChapter": "육아휴직 1주·2주, 오늘의 주제",
       "lines": [
         {
           "id": "h0",
@@ -69,7 +69,7 @@
       "id": "what",
       "chapter": 1,
       "leadIn": 1.25,
-      "ytChapter": "① 사용 조건: 자녀 나이 · 사유 4가지",
+      "ytChapter": "① 단기 육아휴직 조건 (자녀 나이·사유 4가지)",
       "lines": [
         {
           "id": "w1",
@@ -116,7 +116,7 @@
       "id": "rules",
       "chapter": 2,
       "leadIn": 1.25,
-      "ytChapter": "② 사용 방법과 급여: 2주면 얼마?",
+      "ytChapter": "② 사용 방법과 급여 (2주면 얼마?)",
       "lines": [
         {
           "id": "r1",
@@ -246,7 +246,7 @@
       "id": "steps",
       "chapter": 4,
       "leadIn": 1.25,
-      "ytChapter": "④ 신청 방법: 방학은 30일 전 · 급하면 당일",
+      "ytChapter": "④ 신청 기한과 방법 (방학 30일 전 · 급하면 당일)",
       "lines": [
         {
           "id": "p1",
@@ -273,7 +273,7 @@
       "id": "summary",
       "chapter": 5,
       "leadIn": 0.8,
-      "ytChapter": "정리: 3줄 요약",
+      "ytChapter": "3줄 요약",
       "lines": [
         {
           "id": "u1",
