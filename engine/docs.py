@@ -3,13 +3,41 @@
 사용법: python3 engine/docs.py 01-parental-leave
 - episodes/<ep>/script.md 를 새로 씁니다 (장면별 타임코드 + 내레이션).
 - episodes/<ep>/youtube.md 안의 <!-- chapters:start --> ~ <!-- chapters:end --> 구간을 갱신합니다.
+
+목소리를 만들기 전(대본 검토 단계): python3 engine/docs.py 04-reduced-hours --draft
+- 글자 수로 길이를 어림해(초당 CPS 글자, 1~3화 실측) script.md·recording.md·옵시디언 노트를 만듭니다.
+- youtube.md 챕터는 건드리지 않습니다(빌드 후 실제 시각으로 채움).
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+CPS = 6.5  # 채널 목소리(템포 1.05)가 1초에 읽는 글자 수 (1~3화 98문장 실측 6.54, 문장당 오차 약 0.24초)
+
+
+def estimate_timeline(script: dict) -> dict:
+    """목소리를 만들기 전에 글자 수로 어림한 타임라인. 배치 규칙은 tts.py 와 같습니다."""
+    timing = script["timing"]
+    t, scenes, lines = 0.0, [], []
+    for scene in script["scenes"]:
+        start = t
+        if "lines" not in scene:
+            t += scene["duration"]
+        else:
+            t += scene.get("leadIn", timing["leadIn"])
+            n = len(scene["lines"])
+            for i, line in enumerate(scene["lines"]):
+                dur = len(re.sub(r"[^가-힣A-Za-z0-9]", "", line["tts"])) / CPS
+                lines.append({"id": line["id"], "scene": scene["id"], "start": t, "end": t + dur})
+                t += dur
+                if i < n - 1:
+                    t += line.get("pauseAfter", 0.0) + timing["lineGap"]
+            t += scene.get("tail", timing["tail"])
+        scenes.append({"id": scene["id"], "start": start, "end": t})
+    return {"duration": t, "scenes": scenes, "lines": lines, "estimated": True}
 
 
 def tc(sec: float) -> str:
@@ -17,10 +45,13 @@ def tc(sec: float) -> str:
     return f"{s // 60:02d}:{s % 60:02d}"
 
 
-def main(ep: str) -> None:
+def main(ep: str, draft: bool = False) -> None:
     ep_dir = ROOT / "episodes" / ep
     script = json.loads((ep_dir / "script.json").read_text(encoding="utf-8"))
-    timeline = json.loads((ROOT / "build" / ep / "timeline.json").read_text(encoding="utf-8"))
+    if draft:
+        timeline = estimate_timeline(script)
+    else:
+        timeline = json.loads((ROOT / "build" / ep / "timeline.json").read_text(encoding="utf-8"))
     scenes = {s["id"]: s for s in timeline["scenes"]}
     lines = {l["id"]: l for l in timeline["lines"]}
 
@@ -28,8 +59,9 @@ def main(ep: str) -> None:
     if chapters:  # 유튜브 챕터는 00:00에서 시작해야 합니다(앞에 표지 장면이 있어도 첫 챕터는 0초)
         chapters[0] = "00:00" + chapters[0][5:]
 
-    md = [f"# {script['title']}", "", f"- 기준일: {script['asOf']}",
-          f"- 전체 길이: {tc(timeline['duration'])} ({timeline['duration']:.1f}초)",
+    length = (f"- 예상 길이: {tc(timeline['duration'])} ({timeline['duration']:.1f}초) — 목소리를 만들기 전 글자 수로 어림한 값이라 "
+              f"시각은 모두 대략입니다" if draft else f"- 전체 길이: {tc(timeline['duration'])} ({timeline['duration']:.1f}초)")
+    md = [f"# {script['title']}", "", f"- 기준일: {script['asOf']}", length,
           "- 자막 파일: `subtitles.srt` · 장면 코드: `scenes.js` · 원본 데이터: `script.json`", ""]
     for s in script["scenes"]:
         sc = scenes[s["id"]]
@@ -47,7 +79,7 @@ def main(ep: str) -> None:
     (ep_dir / "script.md").write_text("\n".join(md), encoding="utf-8")
 
     yt = ep_dir / "youtube.md"
-    if yt.exists():
+    if yt.exists() and not draft:
         text = yt.read_text(encoding="utf-8")
         a, b = "<!-- chapters:start -->", "<!-- chapters:end -->"
         if a in text and b in text:
@@ -188,4 +220,5 @@ def write_obsidian_notes(ep_dir: Path, script: dict, timeline: dict) -> None:
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "01-parental-leave")
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    main(args[0].rstrip("/").split("/")[-1] if args else "01-parental-leave", draft="--draft" in sys.argv)
